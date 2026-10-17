@@ -1,0 +1,24 @@
+{
+  "name": "rt-ku-community-chat",
+  "version": "0.2.0",
+  "description": "High-efficiency Community & Real-Time Chat Platform inspired by Mattermost, Zulip, Rocket.Chat, and Meta Workplace",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "chat",
+    "community",
+    "realtime",
+    "sse",
+    "meta-workplace",
+    "rt-ku",
+    "nodejs"
+  ],
+  "author": "H1zrim",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

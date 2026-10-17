@@ -1,141 +1,257 @@
 /**
- * RT-Ku - Prototype Script (v0.1)
- * Pure Vanilla JavaScript handling Authentication, 2-Column Chat Layout,
- * LocalStorage state persistence, and Admin CRUD Clear Data.
+ * RT-Ku v0.2 — Hybrid Real-Time Client Engine
+ * Inspired by Mattermost, Zulip, Rocket.Chat & Meta Workplace.
+ *
+ * Dual-Mode Architecture:
+ * 1. Full-Stack Mode: Connects to Node.js backend via REST + Server-Sent Events (SSE)
+ * 2. Standalone Mode: Falls back to LocalStorage + BroadcastChannel when opened statically
  */
 
 const STORAGE_KEYS = {
-  USERS: 'rtku_users',
-  SESSION: 'rtku_session',
-  MESSAGES: 'rtku_messages',
-  ACTIVE_CHAT: 'rtku_active_chat'
+  STORE: 'rtku_v02_store',
+  SESSION: 'rtku_v02_session',
+  THEME: 'rtku_v02_theme'
 };
 
-const INITIAL_USERS = [
-  {
-    nik: "3201010101900001",
-    name: "Bambang Pamungkas",
-    rtrw: "003/005",
-    password: "admin",
-    role: "admin",
-    status: "Active"
-  },
-  {
-    nik: "3201010202920002",
-    name: "Siti Nurhaliza",
-    rtrw: "003/005",
-    password: "user123",
-    role: "citizen",
-    status: "Active"
-  },
-  {
-    nik: "3201010303950003",
-    name: "Budi Santoso",
-    rtrw: "003/005",
-    password: "user123",
-    role: "citizen",
-    status: "Active"
-  },
-  {
-    nik: "3201010404980004",
-    name: "Dewi Lestari",
-    rtrw: "003/005",
-    password: "user123",
-    role: "citizen",
-    status: "Pending"
-  },
-  {
-    nik: "9999999999999999",
-    name: "Akun Fiktif Spammer",
-    rtrw: "999/999",
-    password: "fake",
-    role: "citizen",
-    status: "Fictional"
-  }
-];
+const REACTION_EMOJIS = ['👍', '❤️', '🙏', '🔥', '✅'];
 
-const INITIAL_MESSAGES = [
-  {
-    id: "msg_init_1",
-    channel: "group-rt",
-    senderNik: "3201010202920002",
-    senderName: "Siti Nurhaliza",
-    text: "Selamat pagi bapak/ibu warga RT 003, jangan lupa kerja bakti hari Minggu jam 07.00 pagi ya.",
-    time: "07:30"
-  },
-  {
-    id: "msg_init_2",
-    channel: "group-rt",
-    senderNik: "3201010303950003",
-    senderName: "Budi Santoso",
-    text: "Pagi Bu Siti. Siap, peralatan kebersihan dan tempat sampah sudah dipersiapkan di pos ronda.",
-    time: "07:45"
-  },
-  {
-    id: "msg_init_3",
-    channel: "group-rt",
-    senderNik: "3201010101900001",
-    senderName: "Bambang Pamungkas (Admin)",
-    text: "Terima kasih warga sekalian. Mohon partisipasi seluruh kepala keluarga demi kebersihan lingkungan kita.",
-    time: "08:00"
-  }
-];
+// Default Seed Data (used when running standalone without Node server)
+function getDefaultSeedStore() {
+  return {
+    channels: [
+      {
+        id: 'group-rt',
+        name: 'forum-warga-rt003',
+        title: 'Forum Warga RT 003',
+        category: 'public',
+        topic: 'Saluran Utama Diskusi & Koordinasi Warga RT 003 / RW 005',
+        badge: 'Utama'
+      },
+      {
+        id: 'ch-pengumuman',
+        name: 'pengumuman-resmi',
+        title: 'Pengumuman Pengurus',
+        category: 'announcement',
+        topic: 'Informasi Resmi Ketua RT, Sekretaris, dan Bendahara',
+        badge: 'Resmi'
+      },
+      {
+        id: 'ch-keamanan',
+        name: 'keamanan-ronda',
+        title: 'Keamanan & Siskamling',
+        category: 'public',
+        topic: 'Koordinasi Pos Ronda Malam, Tamu Wajib Lapor & Keamanan Lingkungan',
+        badge: 'Siaga'
+      },
+      {
+        id: 'ch-umkm',
+        name: 'lapak-umkm-warga',
+        title: 'Lapak UMKM & Kuliner Warga',
+        category: 'public',
+        topic: 'Promosi Usaha Warga, Kuliner Harian, dan Jasa Lingkungan RT',
+        badge: 'Ekonomi'
+      }
+    ],
+    users: [
+      {
+        nik: '3201010101900001',
+        name: 'Bambang Pamungkas',
+        rtrw: '003/005',
+        password: 'admin',
+        role: 'admin',
+        title: 'Ketua RT 003',
+        status: 'Active',
+        bio: 'Pengurus RT 003 / RW 005 • Melayani administrasi & ketertiban warga.'
+      },
+      {
+        nik: '3201010202920002',
+        name: 'Siti Nurhaliza',
+        rtrw: '003/005',
+        password: 'user123',
+        role: 'citizen',
+        title: 'Koordinator PKK & Posyandu',
+        status: 'Active',
+        bio: 'Penggerak PKK RT 003 & Posyandu Balita/Lansia.'
+      },
+      {
+        nik: '3201010303950003',
+        name: 'Budi Santoso',
+        rtrw: '003/005',
+        password: 'user123',
+        role: 'citizen',
+        title: 'Koordinator Keamanan',
+        status: 'Active',
+        bio: 'Koordinator Siskamling & Ketertiban Blok A-C.'
+      },
+      {
+        nik: '3201010606930006',
+        name: 'Rina Kartika',
+        rtrw: '003/005',
+        password: 'user123',
+        role: 'citizen',
+        title: 'Bendahara Kas Warga',
+        status: 'Active',
+        bio: 'Pengelola Kas RT & Transparansi Iuran Kebersihan.'
+      },
+      {
+        nik: '3201010404980004',
+        name: 'Dewi Lestari',
+        rtrw: '003/005',
+        password: 'user123',
+        role: 'citizen',
+        title: 'Warga Baru Blok D',
+        status: 'Pending',
+        bio: 'Warga pindahan baru Blok D No. 14.'
+      },
+      {
+        nik: '9999999999999999',
+        name: 'Akun Fiktif Spammer',
+        rtrw: '999/999',
+        password: 'fake',
+        role: 'citizen',
+        title: 'Tidak Terverifikasi',
+        status: 'Fictional',
+        bio: 'Data terindikasi fiktif / duplikat.'
+      }
+    ],
+    messages: [
+      {
+        id: 'msg_init_1',
+        channel: 'group-rt',
+        topic: 'Kerja Bakti Minggu',
+        senderNik: '3201010202920002',
+        senderName: 'Siti Nurhaliza',
+        senderRole: 'citizen',
+        text: 'Selamat pagi bapak/ibu warga RT 003, jangan lupa kerja bakti hari Minggu jam 07.00 pagi ya. Konsumsi teh hangat & gorengan disiapkan ibu-ibu PKK.',
+        time: '07:30',
+        pinned: true,
+        replyTo: null,
+        reactions: { '👍': ['3201010101900001', '3201010303950003'], '❤️': ['3201010606930006'] }
+      },
+      {
+        id: 'msg_init_2',
+        channel: 'group-rt',
+        topic: 'Kerja Bakti Minggu',
+        senderNik: '3201010303950003',
+        senderName: 'Budi Santoso',
+        senderRole: 'citizen',
+        text: 'Pagi Bu Siti. Siap, peralatan kebersihan, cangkul, dan kantong sampah sudah dipersiapkan di pos ronda.',
+        time: '07:45',
+        pinned: false,
+        replyTo: {
+          id: 'msg_init_1',
+          senderName: 'Siti Nurhaliza',
+          text: 'Selamat pagi bapak/ibu warga RT 003, jangan lupa kerja bakti hari Minggu...'
+        },
+        reactions: { '🔥': ['3201010202920002'] }
+      },
+      {
+        id: 'msg_init_3',
+        channel: 'group-rt',
+        topic: 'Pengumuman RT',
+        senderNik: '3201010101900001',
+        senderName: 'Bambang Pamungkas',
+        senderRole: 'admin',
+        text: 'Terima kasih warga sekalian. Fokus utama kita Minggu ini pembersihan saluran drainase Blok A sampai Blok D menjelang musim hujan.',
+        time: '08:00',
+        pinned: true,
+        replyTo: null,
+        reactions: { '✅': ['3201010202920002', '3201010303950003', '3201010606930006'] }
+      },
+      {
+        id: 'msg_init_4',
+        channel: 'ch-pengumuman',
+        topic: 'Administrasi Warga',
+        senderNik: '3201010101900001',
+        senderName: 'Bambang Pamungkas',
+        senderRole: 'admin',
+        text: '[PENGUMUMAN RESMI] Pemutakhiran data kependudukan RT 003 sedang berlangsung. Pastikan NIK keluarga sudah terverifikasi Aktif oleh pengurus.',
+        time: '08:15',
+        pinned: true,
+        replyTo: null,
+        reactions: { '🙏': ['3201010202920002'] }
+      }
+    ],
+    posts: [
+      {
+        id: 'post_1',
+        authorNik: '3201010101900001',
+        authorName: 'Bambang Pamungkas',
+        authorTitle: 'Ketua RT 003',
+        authorRole: 'admin',
+        category: 'Pengumuman Resmi',
+        title: 'Transparansi Kas RT & Rencana Perbaikan Lampu Jalan Lingkungan',
+        content: 'Halo warga RT 003/005! Saldo Kas RT bulan ini tercatat Rp 8.450.000. Minggu depan kita akan melakukan penggantian 6 titik lampu jalan LED hemat energi di sepanjang gang Blok B dan C. Silakan berikan masukan atau suara pada polling di bawah ini.',
+        createdAt: 'Hari ini, 08:10',
+        pinned: true,
+        likes: ['3201010202920002', '3201010303950003', '3201010606930006'],
+        poll: {
+          question: 'Prioritas peningkatan fasilitas RT bulan depan?',
+          options: [
+            { id: 'opt_1', text: 'Penambahan CCTV Sudut Gang Blok C', votes: ['3201010101900001', '3201010303950003'] },
+            { id: 'opt_2', text: 'Peremajaan Taman Bermain & Posyandu', votes: ['3201010202920002', '3201010606930006'] },
+            { id: 'opt_3', text: 'Pengadaan Gerobak Sampah Terpilah', votes: [] }
+          ]
+        },
+        comments: [
+          {
+            id: 'cmt_1',
+            authorNik: '3201010606930006',
+            authorName: 'Rina Kartika',
+            text: 'Laporan rincian nota pembelian lampu LED sudah saya lampirkan di buku kas terbuka RT ya bapak/ibu.',
+            time: '08:22'
+          }
+        ]
+      },
+      {
+        id: 'post_2',
+        authorNik: '3201010202920002',
+        authorName: 'Siti Nurhaliza',
+        authorTitle: 'Koordinator PKK & Posyandu',
+        authorRole: 'citizen',
+        category: 'Kegiatan Warga',
+        title: 'Jadwal Posyandu Balita & Pemeriksaan Kesehatan Lansia Gratis',
+        content: 'Mengundang seluruh warga RT 003 yang memiliki balita serta orang tua/lansia untuk hadir pada kegiatan Posyandu rutin hari Sabtu pukul 08.30 WIB di Balai Warga. Tersedia pengecekan tensi, gula darah, dan pemberian vitamin.',
+        createdAt: 'Kemarin, 19:40',
+        pinned: false,
+        likes: ['3201010101900001'],
+        poll: null,
+        comments: []
+      }
+    ],
+    auditLogs: [
+      {
+        id: 'log_1',
+        time: '08:00',
+        actor: 'Bambang Pamungkas',
+        action: 'Menandai akun 9999999999999999 sebagai Data Fiktif (Fictional)'
+      }
+    ],
+    onlineNiks: ['3201010101900001', '3201010202920002', '3201010303950003']
+  };
+}
 
-let currentUser = null;
-let currentChatTarget = {
-  id: "group-rt",
-  name: "Forum Warga RT 003",
-  isGroup: true,
-  subtitle: "Saluran Publik Warga RT Aktif"
+// ============================================================================
+// APPLICATION STATE
+// ============================================================================
+const state = {
+  serverOnline: false,
+  store: getDefaultSeedStore(),
+  currentUser: null,
+  activeStage: 'chat', // 'chat' | 'feed' | 'directory' | 'admin'
+  activeChat: {
+    id: 'group-rt',
+    name: 'Forum Warga RT 003',
+    isGroup: true,
+    badge: 'Utama',
+    subtitle: 'Saluran Utama Diskusi & Koordinasi Warga RT 003 / RW 005'
+  },
+  replyingTo: null, // { id, senderName, text }
+  feedCategory: 'ALL'
 };
 
-function initializeStorage(forceReset = false) {
-  if (forceReset || !localStorage.getItem(STORAGE_KEYS.USERS)) {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
-  }
-  if (forceReset || !localStorage.getItem(STORAGE_KEYS.MESSAGES)) {
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(INITIAL_MESSAGES));
-  }
-}
-
-function getUsers() {
-  const data = localStorage.getItem(STORAGE_KEYS.USERS);
-  return data ? JSON.parse(data) : [];
-}
-
-function saveUsers(users) {
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-}
-
-function getMessages() {
-  const data = localStorage.getItem(STORAGE_KEYS.MESSAGES);
-  return data ? JSON.parse(data) : [];
-}
-
-function saveMessages(messages) {
-  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages));
-}
-
-function getSession() {
-  const data = localStorage.getItem(STORAGE_KEYS.SESSION);
-  return data ? JSON.parse(data) : null;
-}
-
-function setSession(user) {
-  currentUser = user;
-  if (user) {
-    localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(user));
-  } else {
-    localStorage.removeItem(STORAGE_KEYS.SESSION);
-  }
-}
-
-function getCurrentTimeString() {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
+const broadcastChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rtku_v02_bus') : null;
+let sseConnection = null;
 
 function sanitizeHTML(str) {
   const div = document.createElement('div');
@@ -143,37 +259,164 @@ function sanitizeHTML(str) {
   return div.innerHTML;
 }
 
-const authView = document.getElementById('auth-view');
-const mainView = document.getElementById('main-view');
-const adminView = document.getElementById('admin-view');
+function getCurrentTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
-function showView(viewName) {
-  authView.classList.add('hidden');
-  mainView.classList.add('hidden');
-  adminView.classList.add('hidden');
-
-  if (viewName === 'auth') {
-    authView.classList.remove('hidden');
-  } else if (viewName === 'main') {
-    mainView.classList.remove('hidden');
-    renderMainView();
-  } else if (viewName === 'admin') {
-    if (!currentUser || currentUser.role !== 'admin') {
-      alert('Akses Ditolak: Halaman ini hanya untuk Pengurus / Admin RT.');
-      showView('main');
-      return;
-    }
-    adminView.classList.remove('hidden');
-    renderAdminView();
+// ============================================================================
+// HYBRID DATA LAYER (SERVER REST/SSE + LOCAL FALLBACK)
+// ============================================================================
+function saveLocalStore() {
+  localStorage.setItem(STORAGE_KEYS.STORE, JSON.stringify(state.store));
+  if (broadcastChannel) {
+    broadcastChannel.postMessage({ type: 'SYNC_STORE', store: state.store });
   }
 }
 
-const tabLoginBtn = document.getElementById('tab-login-btn');
-const tabRegisterBtn = document.getElementById('tab-register-btn');
+function loadLocalStore(forceReset = false) {
+  if (!forceReset) {
+    const raw = localStorage.getItem(STORAGE_KEYS.STORE);
+    if (raw) {
+      try {
+        state.store = JSON.parse(raw);
+        return;
+      } catch {
+        // Fallback to seed
+      }
+    }
+  }
+  state.store = getDefaultSeedStore();
+  saveLocalStore();
+}
+
+async function initDataLayer() {
+  loadLocalStore(false);
+  try {
+    const res = await fetch('/api/bootstrap', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      state.serverOnline = true;
+      state.store = { ...state.store, ...data };
+      saveLocalStore();
+      connectSSE();
+    }
+  } catch {
+    state.serverOnline = false;
+  }
+  updateEngineBadge();
+}
+
+function connectSSE() {
+  if (sseConnection) sseConnection.close();
+  const nikParam = state.currentUser ? `?nik=${encodeURIComponent(state.currentUser.nik)}` : '';
+  sseConnection = new EventSource(`/api/events${nikParam}`);
+
+  sseConnection.addEventListener('message:new', (e) => {
+    const msg = JSON.parse(e.data);
+    if (!state.store.messages.some((m) => m.id === msg.id)) {
+      state.store.messages.push(msg);
+      renderChatMessages();
+      renderContextDrawer();
+    }
+  });
+
+  sseConnection.addEventListener('message:update', (e) => {
+    const updated = JSON.parse(e.data);
+    const idx = state.store.messages.findIndex((m) => m.id === updated.id);
+    if (idx !== -1) {
+      state.store.messages[idx] = updated;
+      renderChatMessages();
+      renderContextDrawer();
+    }
+  });
+
+  sseConnection.addEventListener('posts:update', (e) => {
+    const { posts } = JSON.parse(e.data);
+    state.store.posts = posts;
+    renderFeedPosts();
+  });
+
+  sseConnection.addEventListener('users:update', (e) => {
+    const { users, auditLogs } = JSON.parse(e.data);
+    state.store.users = users;
+    if (auditLogs) state.store.auditLogs = auditLogs;
+    renderSidebarLists();
+    renderDirectory();
+    renderAdminView();
+  });
+
+  sseConnection.addEventListener('presence:update', (e) => {
+    const { onlineNiks } = JSON.parse(e.data);
+    state.store.onlineNiks = onlineNiks;
+    renderSidebarLists();
+  });
+
+  sseConnection.addEventListener('bootstrap:reset', (e) => {
+    const data = JSON.parse(e.data);
+    state.store = { ...state.store, ...data };
+    refreshAllViews();
+  });
+}
+
+function updateEngineBadge() {
+  const badge = document.getElementById('engine-status-badge');
+  if (!badge) return;
+  if (state.serverOnline) {
+    badge.textContent = '⚡ Node SSE Real-Time';
+    badge.style.color = 'var(--success)';
+  } else {
+    badge.textContent = '💾 Mode Lokal (BroadcastSync)';
+    badge.style.color = 'var(--primary)';
+  }
+}
+
+if (broadcastChannel) {
+  broadcastChannel.onmessage = (e) => {
+    if (e.data && e.data.type === 'SYNC_STORE' && !state.serverOnline) {
+      state.store = e.data.store;
+      refreshAllViews();
+    }
+  };
+}
+
+// ============================================================================
+// THEME MANAGEMENT (LIGHT / DARK)
+// ============================================================================
+function initTheme() {
+  const saved = localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+}
+
+document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem(STORAGE_KEYS.THEME, next);
+});
+
+// ============================================================================
+// AUTHENTICATION & SESSION
+// ============================================================================
+const authView = document.getElementById('auth-view');
+const mainView = document.getElementById('main-view');
 const loginForm = document.getElementById('login-form');
 const registerForm = document.getElementById('register-form');
 const loginAlert = document.getElementById('login-alert');
 const registerAlert = document.getElementById('register-alert');
+const tabLoginBtn = document.getElementById('tab-login-btn');
+const tabRegisterBtn = document.getElementById('tab-register-btn');
+
+function showAlert(el, msg, type = 'danger') {
+  el.textContent = msg;
+  el.className = `alert alert-${type}`;
+  el.classList.remove('hidden');
+}
+
+function hideAlerts() {
+  loginAlert.classList.add('hidden');
+  registerAlert.classList.add('hidden');
+}
 
 tabLoginBtn.addEventListener('click', () => {
   tabLoginBtn.classList.add('active');
@@ -191,17 +434,6 @@ tabRegisterBtn.addEventListener('click', () => {
   hideAlerts();
 });
 
-function showAlert(element, message, type = 'danger') {
-  element.textContent = message;
-  element.className = `alert alert-${type}`;
-  element.classList.remove('hidden');
-}
-
-function hideAlerts() {
-  loginAlert.classList.add('hidden');
-  registerAlert.classList.add('hidden');
-}
-
 document.getElementById('quick-fill-admin').addEventListener('click', () => {
   tabLoginBtn.click();
   document.getElementById('login-nik').value = '3201010101900001';
@@ -214,47 +446,67 @@ document.getElementById('quick-fill-citizen').addEventListener('click', () => {
   document.getElementById('login-password').value = 'user123';
 });
 
-loginForm.addEventListener('submit', (e) => {
+document.getElementById('quick-fill-security').addEventListener('click', () => {
+  tabLoginBtn.click();
+  document.getElementById('login-nik').value = '3201010303950003';
+  document.getElementById('login-password').value = 'user123';
+});
+
+loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideAlerts();
 
   const nik = document.getElementById('login-nik').value.trim();
   const password = document.getElementById('login-password').value;
 
-  const users = getUsers();
-  const foundUser = users.find(u => u.nik === nik);
+  if (state.serverOnline) {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nik, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(loginAlert, data.error || 'Gagal masuk.');
+        return;
+      }
+      setSession(data.user);
+      loginForm.reset();
+      enterWorkspace();
+      return;
+    } catch {
+      // Fallback to local auth
+    }
+  }
 
-  if (!foundUser) {
+  const found = state.store.users.find((u) => u.nik === nik);
+  if (!found) {
     showAlert(loginAlert, 'NIK tidak terdaftar dalam sistem RT-Ku.');
     return;
   }
-
-  if (foundUser.password !== password) {
+  if (found.password && found.password !== password) {
     showAlert(loginAlert, 'Kata sandi yang Anda masukkan salah.');
     return;
   }
-
-  if (foundUser.status === 'Fictional') {
-    showAlert(loginAlert, 'Akses ditolak: Data kependudukan Anda telah ditandai sebagai FIKTIF oleh Admin. Silakan hubungi pengurus RT.');
+  if (found.status === 'Fictional') {
+    showAlert(loginAlert, 'Akses ditolak: Data kependudukan Anda ditandai sebagai FIKTIF oleh Pengurus RT.');
     return;
   }
 
-  if (foundUser.status === 'Pending') {
-    showAlert(loginAlert, 'Peringatan: Data pendaftaran Anda masih dalam status PENDING verifikasi pengurus RT.', 'warning');
-  }
-
-  setSession(foundUser);
+  setSession(found);
   loginForm.reset();
-  showView('main');
+  enterWorkspace();
 });
 
-registerForm.addEventListener('submit', (e) => {
+registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideAlerts();
 
   const nik = document.getElementById('reg-nik').value.trim();
   const name = document.getElementById('reg-name').value.trim();
   const rtrw = document.getElementById('reg-rtrw').value.trim();
+  const title = document.getElementById('reg-title').value.trim() || 'Warga RT';
   const password = document.getElementById('reg-password').value;
 
   if (!/^\d{16}$/.test(nik)) {
@@ -262,490 +514,985 @@ registerForm.addEventListener('submit', (e) => {
     return;
   }
 
-  const users = getUsers();
-  const existingUser = users.find(u => u.nik === nik);
+  if (state.serverOnline) {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nik, name, rtrw, title, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(registerAlert, data.error || 'Pendaftaran gagal.');
+        return;
+      }
+      registerForm.reset();
+      tabLoginBtn.click();
+      showAlert(loginAlert, `Warga "${name}" berhasil terdaftar! Silakan masuk.`, 'success');
+      document.getElementById('login-nik').value = nik;
+      return;
+    } catch {
+      // Fallback to local registration
+    }
+  }
 
-  if (existingUser) {
+  if (state.store.users.some((u) => u.nik === nik)) {
     showAlert(registerAlert, 'NIK ini sudah terdaftar sebelumnya.');
     return;
   }
 
   const newUser = {
-    nik: nik,
-    name: name,
-    rtrw: rtrw,
-    password: password,
+    nik,
+    name,
+    rtrw,
+    password,
     role: 'citizen',
-    status: 'Active'
+    title,
+    status: 'Active',
+    bio: `Warga RT ${rtrw} • ${title}`
   };
 
-  users.push(newUser);
-  saveUsers(users);
+  state.store.users.push(newUser);
+  state.store.auditLogs.unshift({
+    id: `log_${Date.now()}`,
+    time: getCurrentTime(),
+    actor: name,
+    action: `Registrasi mandiri warga baru (NIK: ${nik})`
+  });
+  saveLocalStore();
 
   registerForm.reset();
-  showAlert(loginAlert, `Pendaftaran warga (${name}) berhasil! Silakan masuk menggunakan NIK dan kata sandi Anda.`, 'success');
   tabLoginBtn.click();
+  showAlert(loginAlert, `Pendaftaran warga (${name}) berhasil! Silakan masuk.`, 'success');
   document.getElementById('login-nik').value = nik;
-  document.getElementById('login-password').focus();
 });
 
-function performLogout() {
+function setSession(user) {
+  state.currentUser = user;
+  if (user) {
+    localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.SESSION);
+  }
+}
+
+document.getElementById('btn-logout').addEventListener('click', () => {
   setSession(null);
-  currentChatTarget = {
-    id: "group-rt",
-    name: "Forum Warga RT 003",
-    isGroup: true,
-    subtitle: "Saluran Publik Warga RT Aktif"
-  };
-  showView('auth');
+  mainView.classList.add('hidden');
+  authView.classList.remove('hidden');
+});
+
+function enterWorkspace() {
+  authView.classList.add('hidden');
+  mainView.classList.remove('hidden');
+  if (state.serverOnline) connectSSE();
+  switchStage('chat');
+  refreshAllViews();
 }
 
-document.getElementById('btn-logout').addEventListener('click', performLogout);
-document.getElementById('btn-admin-logout').addEventListener('click', performLogout);
+// ============================================================================
+// NAVIGATION RAIL & STAGE SWITCHER
+// ============================================================================
+const railButtons = document.querySelectorAll('.rail-btn[data-nav]');
+const stages = {
+  chat: document.getElementById('stage-chat'),
+  feed: document.getElementById('stage-feed'),
+  directory: document.getElementById('stage-directory'),
+  admin: document.getElementById('stage-admin')
+};
 
-document.getElementById('btn-goto-admin').addEventListener('click', () => {
-  showView('admin');
-});
-
-document.getElementById('btn-admin-back-chat').addEventListener('click', () => {
-  showView('main');
-});
-
-const mobileToggleBtn = document.getElementById('mobile-toggle-sidebar');
-const appSidebar = document.getElementById('app-sidebar');
-if (mobileToggleBtn) {
-  mobileToggleBtn.addEventListener('click', () => {
-    appSidebar.classList.toggle('open');
+railButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const target = btn.getAttribute('data-nav');
+    switchStage(target);
   });
+});
+
+function switchStage(stageName) {
+  if (stageName === 'admin' && (!state.currentUser || state.currentUser.role !== 'admin')) {
+    alert('Akses Ditolak: Hanya Pengurus / Admin RT yang dapat membuka konsol tata kelola.');
+    return;
+  }
+  state.activeStage = stageName;
+
+  railButtons.forEach((b) => {
+    b.classList.toggle('active', b.getAttribute('data-nav') === stageName);
+  });
+
+  Object.entries(stages).forEach(([key, el]) => {
+    el.classList.toggle('hidden', key !== stageName);
+  });
+
+  if (stageName === 'chat') {
+    renderChatMessages();
+    renderContextDrawer();
+  } else if (stageName === 'feed') {
+    renderFeedPosts();
+  } else if (stageName === 'directory') {
+    renderDirectory();
+  } else if (stageName === 'admin') {
+    renderAdminView();
+  }
 }
 
-function renderMainView() {
-  if (!currentUser) return;
+function refreshAllViews() {
+  if (!state.currentUser) return;
 
-  document.getElementById('sidebar-name').textContent = currentUser.name;
-  document.getElementById('sidebar-nik').textContent = `NIK: ${currentUser.nik} (RT ${currentUser.rtrw})`;
-  document.getElementById('sidebar-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+  // Profile header
+  document.getElementById('sidebar-name').textContent = state.currentUser.name;
+  document.getElementById('sidebar-nik').textContent = `NIK: ${state.currentUser.nik}`;
+  document.getElementById('sidebar-avatar').textContent = state.currentUser.name.charAt(0).toUpperCase();
 
-  const sidebarRoleEl = document.getElementById('sidebar-role');
-  sidebarRoleEl.textContent = currentUser.role === 'admin' ? 'Pengurus / Admin' : 'Warga RT';
-  if (currentUser.role === 'admin') {
-    sidebarRoleEl.classList.add('admin');
-  } else {
-    sidebarRoleEl.classList.remove('admin');
-  }
+  const roleEl = document.getElementById('sidebar-role');
+  roleEl.textContent = state.currentUser.role === 'admin' ? 'Ketua / Admin RT' : (state.currentUser.title || 'Warga RT');
+  roleEl.classList.toggle('admin', state.currentUser.role === 'admin');
 
-  const adminSection = document.getElementById('sidebar-admin-section');
-  if (currentUser.role === 'admin') {
-    adminSection.classList.remove('hidden');
-  } else {
-    adminSection.classList.add('hidden');
-  }
+  const railAdminBtn = document.getElementById('rail-admin-btn');
+  railAdminBtn.classList.toggle('hidden', state.currentUser.role !== 'admin');
 
-  renderContactsList();
+  updateEngineBadge();
+  renderSidebarLists(document.getElementById('contact-search').value);
   renderChatHeader();
   renderChatMessages();
+  renderContextDrawer();
+  renderFeedPosts();
+  renderDirectory();
+  if (state.currentUser.role === 'admin') {
+    renderAdminView();
+  }
 }
 
-function renderContactsList(filterQuery = '') {
-  const contactsContainer = document.getElementById('contacts-list');
-  contactsContainer.innerHTML = '';
+// ============================================================================
+// SIDEBAR: CHANNELS & ACTIVE CITIZENS
+// ============================================================================
+function renderSidebarLists(query = '') {
+  const q = String(query || '').toLowerCase().trim();
+  const channelsList = document.getElementById('channels-list');
+  const contactsList = document.getElementById('contacts-list');
+  channelsList.innerHTML = '';
+  contactsList.innerHTML = '';
 
-  const users = getUsers();
-  const activeCitizens = users.filter(u => 
-    u.status === 'Active' && 
-    u.nik !== currentUser.nik
-  );
-
-  const query = filterQuery.toLowerCase().trim();
-
-  const isGroupMatches = 'forum warga rt 003 grup publik'.includes(query);
-  if (!query || isGroupMatches) {
-    const groupItem = document.createElement('div');
-    groupItem.className = `contact-item ${currentChatTarget.id === 'group-rt' ? 'active' : ''}`;
-    groupItem.innerHTML = `
-      <div class="contact-avatar group-avatar">RT</div>
-      <div class="contact-details">
-        <div class="contact-header">
-          <span class="contact-title">Forum Warga RT 003</span>
+  // 1. Render Channels
+  state.store.channels
+    .filter((ch) => !q || ch.title.toLowerCase().includes(q) || ch.name.toLowerCase().includes(q))
+    .forEach((ch) => {
+      const div = document.createElement('div');
+      div.className = `contact-item ${state.activeChat.id === ch.id ? 'active' : ''}`;
+      div.innerHTML = `
+        <div class="contact-avatar channel-hash">#</div>
+        <div class="contact-details">
+          <div class="contact-title">${sanitizeHTML(ch.title)}</div>
+          <div class="contact-sub">${sanitizeHTML(ch.badge)} • Publik</div>
         </div>
-        <div class="contact-sub">Grup Resmi Warga RT</div>
-      </div>
-    `;
-    groupItem.addEventListener('click', () => {
-      currentChatTarget = {
-        id: "group-rt",
-        name: "Forum Warga RT 003",
-        isGroup: true,
-        subtitle: "Saluran Publik Warga RT Aktif"
-      };
-      renderContactsList(filterQuery);
-      renderChatHeader();
-      renderChatMessages();
-      if (window.innerWidth <= 768) {
-        appSidebar.classList.remove('open');
-      }
-    });
-    contactsContainer.appendChild(groupItem);
-  }
-
-  const matchingCitizens = activeCitizens.filter(c => 
-    c.name.toLowerCase().includes(query) || 
-    c.nik.includes(query)
-  );
-
-  matchingCitizens.forEach(citizen => {
-    const item = document.createElement('div');
-    const isCurrentActive = currentChatTarget.id === citizen.nik;
-    item.className = `contact-item ${isCurrentActive ? 'active' : ''}`;
-
-    const roleBadge = citizen.role === 'admin' ? ' • Admin' : '';
-    item.innerHTML = `
-      <div class="contact-avatar">${sanitizeHTML(citizen.name.charAt(0).toUpperCase())}</div>
-      <div class="contact-details">
-        <div class="contact-header">
-          <span class="contact-title">${sanitizeHTML(citizen.name)}</span>
-        </div>
-        <div class="contact-sub">NIK: ${sanitizeHTML(citizen.nik)}${roleBadge}</div>
-      </div>
-    `;
-
-    item.addEventListener('click', () => {
-      currentChatTarget = {
-        id: citizen.nik,
-        name: citizen.name,
-        isGroup: false,
-        subtitle: `Warga Aktif • RT ${citizen.rtrw}`
-      };
-      renderContactsList(filterQuery);
-      renderChatHeader();
-      renderChatMessages();
-      if (window.innerWidth <= 768) {
-        appSidebar.classList.remove('open');
-      }
+      `;
+      div.addEventListener('click', () => {
+        state.activeChat = {
+          id: ch.id,
+          name: ch.title,
+          isGroup: true,
+          badge: ch.badge,
+          subtitle: ch.topic
+        };
+        switchStage('chat');
+        renderSidebarLists(q);
+        renderChatHeader();
+        renderChatMessages();
+        renderContextDrawer();
+        document.getElementById('app-sidebar').classList.remove('open');
+      });
+      channelsList.appendChild(div);
     });
 
-    contactsContainer.appendChild(item);
+  // 2. Render Active Citizens (Direct Messages)
+  const activeCitizens = state.store.users.filter(
+    (u) => u.status === 'Active' && u.nik !== state.currentUser.nik &&
+      (!q || u.name.toLowerCase().includes(q) || u.nik.includes(q))
+  );
+
+  activeCitizens.forEach((citizen) => {
+    const isOnline = (state.store.onlineNiks || []).includes(citizen.nik);
+    const div = document.createElement('div');
+    div.className = `contact-item ${state.activeChat.id === citizen.nik ? 'active' : ''}`;
+    div.innerHTML = `
+      <div class="contact-avatar">
+        ${sanitizeHTML(citizen.name.charAt(0).toUpperCase())}
+        ${isOnline ? '<span class="online-dot" title="Online"></span>' : ''}
+      </div>
+      <div class="contact-details">
+        <div class="contact-title">${sanitizeHTML(citizen.name)}</div>
+        <div class="contact-sub">${sanitizeHTML(citizen.title || `RT ${citizen.rtrw}`)}</div>
+      </div>
+    `;
+    div.addEventListener('click', () => {
+      openDirectMessage(citizen);
+    });
+    contactsList.appendChild(div);
   });
+}
 
-  if (!isGroupMatches && matchingCitizens.length === 0) {
-    contactsContainer.innerHTML = `
-      <div style="text-align: center; color: var(--neutral-400); font-size: 0.8125rem; padding: 1.5rem 0.5rem;">
-        Tidak ada warga aktif ditemukan dengan kata kunci "${sanitizeHTML(query)}"
-      </div>
-    `;
-  }
+function openDirectMessage(citizen) {
+  state.activeChat = {
+    id: citizen.nik,
+    name: citizen.name,
+    isGroup: false,
+    badge: citizen.role === 'admin' ? 'Pengurus RT' : 'Warga Aktif',
+    subtitle: `${citizen.title || 'Warga'} • NIK: ${citizen.nik} (RT ${citizen.rtrw})`
+  };
+  switchStage('chat');
+  renderSidebarLists(document.getElementById('contact-search').value);
+  renderChatHeader();
+  renderChatMessages();
+  renderContextDrawer();
+  document.getElementById('app-sidebar').classList.remove('open');
 }
 
 document.getElementById('contact-search').addEventListener('input', (e) => {
-  renderContactsList(e.target.value);
+  renderSidebarLists(e.target.value);
 });
 
-function renderChatHeader() {
-  document.getElementById('chat-current-title').textContent = currentChatTarget.name;
-  document.getElementById('chat-current-subtitle').textContent = currentChatTarget.subtitle;
-  const avatarEl = document.getElementById('chat-current-avatar');
-
-  if (currentChatTarget.isGroup) {
-    avatarEl.textContent = 'RT';
-    avatarEl.style.background = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
-  } else {
-    avatarEl.textContent = currentChatTarget.name.charAt(0).toUpperCase();
-    avatarEl.style.background = 'linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)';
+// Keyboard shortcut Ctrl+K to focus search
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    document.getElementById('contact-search').focus();
   }
+  if (e.key === 'Escape' && state.replyingTo) {
+    clearReplyTarget();
+  }
+});
+
+// ============================================================================
+// REAL-TIME CHAT STREAM (THREADS, REACTIONS, PINS)
+// ============================================================================
+function renderChatHeader() {
+  document.getElementById('chat-current-title').textContent = state.activeChat.name;
+  document.getElementById('chat-current-badge').textContent = state.activeChat.badge || 'Saluran';
+  document.getElementById('chat-current-subtitle').textContent = state.activeChat.subtitle;
+
+  const avatar = document.getElementById('chat-current-avatar');
+  avatar.textContent = state.activeChat.isGroup ? '#' : state.activeChat.name.charAt(0).toUpperCase();
+}
+
+function getActiveConversationMessages() {
+  const filterText = (document.getElementById('chat-message-filter').value || '').toLowerCase().trim();
+  return state.store.messages.filter((m) => {
+    const inConvo = state.activeChat.isGroup
+      ? m.channel === state.activeChat.id
+      : (m.senderNik === state.currentUser.nik && m.channel === state.activeChat.id) ||
+        (m.senderNik === state.activeChat.id && (m.channel === state.currentUser.nik || m.recipientNik === state.currentUser.nik));
+
+    if (!inConvo) return false;
+    if (!filterText) return true;
+    return (
+      m.text.toLowerCase().includes(filterText) ||
+      (m.senderName || '').toLowerCase().includes(filterText) ||
+      (m.topic || '').toLowerCase().includes(filterText)
+    );
+  });
 }
 
 function renderChatMessages() {
   const container = document.getElementById('chat-messages-container');
   container.innerHTML = '';
 
-  const allMessages = getMessages();
+  const messages = getActiveConversationMessages();
 
-  const filtered = allMessages.filter(msg => {
-    if (currentChatTarget.isGroup) {
-      return msg.channel === 'group-rt';
-    } else {
-      return (
-        (msg.senderNik === currentUser.nik && msg.channel === currentChatTarget.id) ||
-        (msg.senderNik === currentChatTarget.id && (msg.channel === currentUser.nik || msg.recipientNik === currentUser.nik))
-      );
-    }
-  });
+  // Pinned Banner
+  const pinnedMsgs = messages.filter((m) => m.pinned);
+  const pinnedBanner = document.getElementById('pinned-banner');
+  if (pinnedMsgs.length > 0) {
+    const latestPin = pinnedMsgs[pinnedMsgs.length - 1];
+    document.getElementById('pinned-banner-text').innerHTML =
+      `<strong>${sanitizeHTML(latestPin.senderName)}:</strong> ${sanitizeHTML(latestPin.text)}`;
+    pinnedBanner.classList.remove('hidden');
+  } else {
+    pinnedBanner.classList.add('hidden');
+  }
 
-  if (filtered.length === 0) {
+  if (messages.length === 0) {
     container.innerHTML = `
-      <div class="chat-empty-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-        <p>Belum ada percakapan. Mulai kirim pesan pertama Anda sekarang!</p>
+      <div style="margin:auto;text-align:center;color:var(--text-muted);padding:2rem;">
+        <p>Belum ada pesan pada saluran ini. Mulailah diskusi pertama Anda!</p>
       </div>
     `;
     return;
   }
 
-  filtered.forEach(msg => {
-    const isSentByMe = msg.senderNik === currentUser.nik;
-    const bubbleWrapper = document.createElement('div');
-    bubbleWrapper.className = `chat-bubble-wrapper ${isSentByMe ? 'sent' : 'received'}`;
+  messages.forEach((msg) => {
+    const isMe = msg.senderNik === state.currentUser.nik;
+    const wrapper = document.createElement('div');
+    wrapper.className = `chat-bubble-wrapper ${isMe ? 'sent' : 'received'}`;
 
-    const senderDisplay = !isSentByMe ? `<span class="chat-sender-name">${sanitizeHTML(msg.senderName)}</span>` : '';
+    const topicBadge = msg.topic ? `<span class="chat-topic-tag"># ${sanitizeHTML(msg.topic)}</span>` : '';
+    const pinBadge = msg.pinned ? `<span class="chat-topic-tag" style="background:var(--warning-light);color:var(--warning-dark);">📌 Disematkan</span>` : '';
 
-    bubbleWrapper.innerHTML = `
-      ${senderDisplay}
-      <div class="chat-bubble">
-        <div class="chat-bubble-text">${sanitizeHTML(msg.text)}</div>
-        <div class="chat-bubble-time">${sanitizeHTML(msg.time)}</div>
+    const replyHtml = msg.replyTo
+      ? `<div class="reply-quote-box"><strong>↩ ${sanitizeHTML(msg.replyTo.senderName)}:</strong> ${sanitizeHTML(msg.replyTo.text)}</div>`
+      : '';
+
+    // Reactions
+    const reactionsObj = msg.reactions || {};
+    const reactionButtons = REACTION_EMOJIS.map((emoji) => {
+      const voters = reactionsObj[emoji] || [];
+      const count = voters.length;
+      const isVoted = voters.includes(state.currentUser.nik);
+      if (count === 0) return '';
+      return `<button type="button" class="reaction-chip ${isVoted ? 'active' : ''}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} ${count}</button>`;
+    }).join('');
+
+    wrapper.innerHTML = `
+      <div class="chat-meta-top">
+        ${!isMe ? `<span class="chat-sender-name">${sanitizeHTML(msg.senderName)}</span>` : ''}
+        ${topicBadge}
+        ${pinBadge}
       </div>
+      <div class="chat-bubble">
+        ${replyHtml}
+        <div>${sanitizeHTML(msg.text)}</div>
+        <div class="chat-bubble-footer">
+          <span class="chat-bubble-time">${sanitizeHTML(msg.time)}</span>
+          <div class="bubble-Utility-btns">
+            <button type="button" class="bubble-action-btn" title="Beri Reaksi 👍" onclick="toggleReaction('${msg.id}', '👍')">👍</button>
+            <button type="button" class="bubble-action-btn" title="Beri Reaksi ❤️" onclick="toggleReaction('${msg.id}', '❤️')">❤️</button>
+            <button type="button" class="bubble-action-btn" title="Balas Pesan (Thread)" onclick="setReplyTarget('${msg.id}')">↩ Balas</button>
+            <button type="button" class="bubble-action-btn" title="Sematkan Pesan (Pin)" onclick="togglePinMessage('${msg.id}')">📌</button>
+          </div>
+        </div>
+      </div>
+      ${reactionButtons ? `<div class="reactions-row">${reactionButtons}</div>` : ''}
     `;
 
-    container.appendChild(bubbleWrapper);
+    container.appendChild(wrapper);
   });
 
   container.scrollTop = container.scrollHeight;
 }
 
-const chatForm = document.getElementById('chat-form');
-const chatInputText = document.getElementById('chat-input-text');
-
-chatForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const text = chatInputText.value.trim();
-  if (!text) return;
-
-  const newMessage = {
-    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-    channel: currentChatTarget.id,
-    recipientNik: currentChatTarget.isGroup ? null : currentChatTarget.id,
-    senderNik: currentUser.nik,
-    senderName: currentUser.name,
-    text: text,
-    time: getCurrentTimeString()
-  };
-
-  const messages = getMessages();
-  messages.push(newMessage);
-  saveMessages(messages);
-
-  chatInputText.value = '';
+document.getElementById('chat-message-filter').addEventListener('input', () => {
   renderChatMessages();
-
-  simulateIncomingResponse(text, currentChatTarget);
 });
 
-function simulateIncomingResponse(userText, target) {
-  const users = getUsers();
-  const activeCitizens = users.filter(u => u.status === 'Active' && u.nik !== currentUser.nik);
+window.setReplyTarget = function (msgId) {
+  const msg = state.store.messages.find((m) => m.id === msgId);
+  if (!msg) return;
+  state.replyingTo = {
+    id: msg.id,
+    senderName: msg.senderName,
+    text: msg.text.slice(0, 70)
+  };
+  document.getElementById('reply-target-name').textContent = state.replyingTo.senderName;
+  document.getElementById('reply-target-text').textContent = state.replyingTo.text;
+  document.getElementById('reply-preview-bar').classList.remove('hidden');
+  document.getElementById('chat-input-text').focus();
+};
+
+function clearReplyTarget() {
+  state.replyingTo = null;
+  document.getElementById('reply-preview-bar').classList.add('hidden');
+}
+
+document.getElementById('btn-cancel-reply').addEventListener('click', clearReplyTarget);
+
+window.toggleReaction = async function (messageId, emoji) {
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/messages/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, emoji, nik: state.currentUser.nik })
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+  const msg = state.store.messages.find((m) => m.id === messageId);
+  if (!msg) return;
+  if (!msg.reactions) msg.reactions = {};
+  if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
+  const idx = msg.reactions[emoji].indexOf(state.currentUser.nik);
+  if (idx === -1) msg.reactions[emoji].push(state.currentUser.nik);
+  else msg.reactions[emoji].splice(idx, 1);
+  saveLocalStore();
+  renderChatMessages();
+};
+
+window.togglePinMessage = async function (messageId) {
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/messages/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId })
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+  const msg = state.store.messages.find((m) => m.id === messageId);
+  if (!msg) return;
+  msg.pinned = !msg.pinned;
+  saveLocalStore();
+  renderChatMessages();
+  renderContextDrawer();
+};
+
+// Send Chat Message
+document.getElementById('chat-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const textInput = document.getElementById('chat-input-text');
+  const topicInput = document.getElementById('chat-input-topic');
+  const text = textInput.value.trim();
+  const topic = topicInput.value.trim() || (state.activeChat.isGroup ? 'Diskusi Warga' : 'Pesan Langsung');
+  if (!text) return;
+
+  const payload = {
+    channel: state.activeChat.id,
+    recipientNik: state.activeChat.isGroup ? null : state.activeChat.id,
+    topic,
+    senderNik: state.currentUser.nik,
+    senderName: state.currentUser.name,
+    senderRole: state.currentUser.role,
+    text,
+    replyTo: state.replyingTo
+  };
+
+  textInput.value = '';
+  clearReplyTarget();
+
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+
+  const localMsg = {
+    ...payload,
+    id: `msg_${Date.now()}`,
+    time: getCurrentTime(),
+    pinned: false,
+    reactions: {}
+  };
+  state.store.messages.push(localMsg);
+  saveLocalStore();
+  renderChatMessages();
+  simulateNeighborReply(localMsg);
+});
+
+function simulateNeighborReply(sentMsg) {
+  const activeCitizens = state.store.users.filter(
+    (u) => u.status === 'Active' && u.nik !== state.currentUser.nik
+  );
   if (activeCitizens.length === 0) return;
 
   setTimeout(() => {
-    let responder;
-    let channelTarget;
+    const responder = state.activeChat.isGroup
+      ? activeCitizens[Math.floor(Math.random() * activeCitizens.length)]
+      : activeCitizens.find((u) => u.nik === state.activeChat.id);
+    if (!responder) return;
 
-    if (target.isGroup) {
-      responder = activeCitizens[Math.floor(Math.random() * activeCitizens.length)];
-      channelTarget = 'group-rt';
-    } else {
-      responder = activeCitizens.find(u => u.nik === target.id);
-      if (!responder) return;
-      channelTarget = currentUser.nik;
-    }
-
-    const responses = [
-      "Baik, terima kasih atas informasinya.",
-      "Siap, kami catat untuk diteruskan ke warga sekitar.",
-      "Terima kasih sudah peduli dengan lingkungan RT kita!",
-      "Baik pak/bu, segera kami tindak lanjuti.",
-      "Sepakat! Mari kita jaga kerukunan RT bersama."
+    const replies = [
+      'Baik, terima kasih informasinya. Segera kami koordinasikan bersama warga.',
+      'Siap! Sudah tercatat di agenda lingkungan RT 003.',
+      'Setuju, mari kita dukung bersama demi kenyamanan warga RT kita.',
+      'Terima kasih laporannya, pengurus dan tim keamanan siap menindaklanjuti.'
     ];
-    const replyText = responses[Math.floor(Math.random() * responses.length)];
 
-    const simMessage = {
+    const replyMsg = {
       id: `msg_sim_${Date.now()}`,
-      channel: channelTarget,
-      recipientNik: target.isGroup ? null : currentUser.nik,
+      channel: state.activeChat.isGroup ? state.activeChat.id : state.currentUser.nik,
+      recipientNik: state.activeChat.isGroup ? null : state.currentUser.nik,
+      topic: sentMsg.topic || 'Tanggapan Warga',
       senderNik: responder.nik,
-      senderName: responder.name + (responder.role === 'admin' ? ' (Admin)' : ''),
-      text: replyText,
-      time: getCurrentTimeString()
+      senderName: responder.name,
+      senderRole: responder.role,
+      text: replies[Math.floor(Math.random() * replies.length)],
+      time: getCurrentTime(),
+      pinned: false,
+      replyTo: {
+        id: sentMsg.id,
+        senderName: sentMsg.senderName,
+        text: sentMsg.text.slice(0, 60)
+      },
+      reactions: {}
     };
 
-    const msgs = getMessages();
-    msgs.push(simMessage);
-    saveMessages(msgs);
-
-    if (currentChatTarget.id === target.id) {
+    state.store.messages.push(replyMsg);
+    saveLocalStore();
+    if (state.activeStage === 'chat') {
       renderChatMessages();
     }
-  }, 1200);
+  }, 1100);
 }
 
-const citizensTableBody = document.getElementById('citizens-table-body');
-const adminSearchInput = document.getElementById('admin-search-input');
-const adminFilterStatus = document.getElementById('admin-filter-status');
-const adminAlert = document.getElementById('admin-alert');
+// ============================================================================
+// CONTEXTUAL RIGHT DRAWER
+// ============================================================================
+function renderContextDrawer() {
+  document.getElementById('drawer-channel-desc').textContent = state.activeChat.subtitle;
+  const pinnedContainer = document.getElementById('drawer-pinned-list');
+  pinnedContainer.innerHTML = '';
 
-function renderAdminView() {
-  if (!currentUser || currentUser.role !== 'admin') return;
-
-  const users = getUsers();
-
-  const totalCount = users.length;
-  const activeCount = users.filter(u => u.status === 'Active').length;
-  const pendingCount = users.filter(u => u.status === 'Pending').length;
-  const fictionalCount = users.filter(u => u.status === 'Fictional').length;
-
-  document.getElementById('stat-total-citizens').textContent = totalCount;
-  document.getElementById('stat-active-citizens').textContent = activeCount;
-  document.getElementById('stat-pending-citizens').textContent = pendingCount;
-  document.getElementById('stat-fictional-citizens').textContent = fictionalCount;
-
-  const searchQuery = adminSearchInput.value.toLowerCase().trim();
-  const statusFilter = adminFilterStatus.value;
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery) || user.nik.includes(searchQuery);
-    const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  citizensTableBody.innerHTML = '';
-
-  if (filteredUsers.length === 0) {
-    citizensTableBody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; color: var(--neutral-400); padding: 2rem;">
-          Tidak ada data warga yang sesuai dengan pencarian atau filter.
-        </td>
-      </tr>
-    `;
+  const pinned = getActiveConversationMessages().filter((m) => m.pinned);
+  if (pinned.length === 0) {
+    pinnedContainer.innerHTML = `<div style="font-size:0.75rem;color:var(--text-muted);">Belum ada pesan yang disematkan. Klik ikon 📌 pada pesan penting.</div>`;
     return;
   }
 
-  filteredUsers.forEach((user, index) => {
-    const tr = document.createElement('tr');
+  pinned.forEach((m) => {
+    const card = document.createElement('div');
+    card.className = 'pinned-card';
+    card.innerHTML = `<strong>${sanitizeHTML(m.senderName)} (${sanitizeHTML(m.time)}):</strong><br>${sanitizeHTML(m.text)}`;
+    pinnedContainer.appendChild(card);
+  });
+}
 
-    let statusBadgeClass = 'badge-active';
-    let statusLabel = 'Aktif (Active)';
-    if (user.status === 'Pending') {
-      statusBadgeClass = 'badge-pending';
-      statusLabel = 'Menunggu Verifikasi (Pending)';
-    } else if (user.status === 'Fictional') {
-      statusBadgeClass = 'badge-fictional';
-      statusLabel = 'Fiktif / Palsu (Fictional)';
+document.getElementById('btn-toggle-drawer').addEventListener('click', () => {
+  document.getElementById('context-drawer').classList.toggle('hidden');
+});
+
+// ============================================================================
+// STAGE B: META WORKPLACE / COMMUNITY FEED & POLLS
+// ============================================================================
+document.getElementById('btn-toggle-poll').addEventListener('click', () => {
+  document.getElementById('poll-builder').classList.toggle('hidden');
+});
+
+document.querySelectorAll('#feed-category-filters .pill-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#feed-category-filters .pill-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.feedCategory = btn.getAttribute('data-cat');
+    renderFeedPosts();
+  });
+});
+
+document.getElementById('feed-post-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('post-title').value.trim();
+  const category = document.getElementById('post-category').value;
+  const content = document.getElementById('post-content').value.trim();
+  const pollQuestion = document.getElementById('poll-question').value.trim();
+  const pollOptionsRaw = document.getElementById('poll-options').value.trim();
+  const pollOptions = pollOptionsRaw ? pollOptionsRaw.split(',').map((s) => s.trim()).filter(Boolean) : [];
+
+  if (!title || !content) return;
+
+  const payload = {
+    authorNik: state.currentUser.nik,
+    authorName: state.currentUser.name,
+    authorTitle: state.currentUser.title || 'Warga RT',
+    authorRole: state.currentUser.role,
+    category,
+    title,
+    content,
+    pollQuestion,
+    pollOptions
+  };
+
+  e.target.reset();
+  document.getElementById('poll-builder').classList.add('hidden');
+
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return;
+    } catch {
+      // Fallback local
     }
+  }
 
-    const isSelfAdmin = user.nik === currentUser.nik;
+  let poll = null;
+  if (pollQuestion && pollOptions.length >= 2) {
+    poll = {
+      question: pollQuestion,
+      options: pollOptions.map((opt, i) => ({ id: `opt_${Date.now()}_${i}`, text: opt, votes: [] }))
+    };
+  }
 
-    let actionButtons = '';
-    if (isSelfAdmin) {
-      actionButtons = '<span style="font-size: 0.75rem; color: var(--neutral-400); font-style: italic;">Akun Anda Sendiri</span>';
-    } else {
-      actionButtons = `
-        <div class="table-actions">
-          ${user.status !== 'Active' ? `<button type="button" class="btn-action btn-action-activate" onclick="adminSetStatus('${user.nik}', 'Active')">Aktifkan</button>` : ''}
-          ${user.status !== 'Pending' ? `<button type="button" class="btn-action" style="background: var(--warning-light); color: var(--warning-dark); border: 1px solid var(--warning-border);" onclick="adminSetStatus('${user.nik}', 'Pending')">Set Pending</button>` : ''}
-          ${user.status !== 'Fictional' ? `<button type="button" class="btn-action btn-action-flag" onclick="adminSetStatus('${user.nik}', 'Fictional')">Tandai Fiktif</button>` : ''}
-          <button type="button" class="btn-action btn-action-delete" onclick="adminDeleteUser('${user.nik}')">Hapus</button>
+  state.store.posts.unshift({
+    id: `post_${Date.now()}`,
+    ...payload,
+    createdAt: `Hari ini, ${getCurrentTime()}`,
+    pinned: state.currentUser.role === 'admin',
+    likes: [],
+    poll,
+    comments: []
+  });
+  saveLocalStore();
+  renderFeedPosts();
+});
+
+function renderFeedPosts() {
+  const container = document.getElementById('feed-posts-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const filtered = (state.store.posts || []).filter(
+    (p) => state.feedCategory === 'ALL' || p.category === state.feedCategory
+  );
+
+  filtered.forEach((post) => {
+    const isLiked = (post.likes || []).includes(state.currentUser.nik);
+    const card = document.createElement('article');
+    card.className = 'feed-post-card';
+
+    let pollHtml = '';
+    if (post.poll) {
+      const totalVotes = post.poll.options.reduce((acc, o) => acc + o.votes.length, 0);
+      const optsHtml = post.poll.options.map((opt) => {
+        const count = opt.votes.length;
+        const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+        const voted = opt.votes.includes(state.currentUser.nik);
+        return `
+          <button type="button" class="poll-option-btn ${voted ? 'voted' : ''}" onclick="interactPost('${post.id}', 'vote', '${opt.id}')">
+            <span>${voted ? '✅ ' : ''}${sanitizeHTML(opt.text)}</span>
+            <span>${pct}% (${count} suara)</span>
+          </button>
+        `;
+      }).join('');
+
+      pollHtml = `
+        <div class="poll-box">
+          <div class="poll-question-title">📊 Musyawarah Polling: ${sanitizeHTML(post.poll.question)}</div>
+          ${optsHtml}
+          <small style="color:var(--text-muted);font-size:0.72rem;">Total partisipasi: ${totalVotes} warga</small>
         </div>
       `;
     }
 
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td><strong>${sanitizeHTML(user.nik)}</strong></td>
-      <td>${sanitizeHTML(user.name)}</td>
-      <td>RT ${sanitizeHTML(user.rtrw)}</td>
-      <td><span class="badge-role">${user.role === 'admin' ? 'Admin RT' : 'Warga'}</span></td>
-      <td><span class="badge ${statusBadgeClass}">${statusLabel}</span></td>
-      <td>${actionButtons}</td>
-    `;
+    const commentsHtml = (post.comments || []).map((c) => `
+      <div class="comment-item">
+        <strong>${sanitizeHTML(c.authorName)}</strong> <span style="color:var(--text-muted);font-size:0.7rem;">(${sanitizeHTML(c.time)})</span>:
+        ${sanitizeHTML(c.text)}
+      </div>
+    `).join('');
 
-    citizensTableBody.appendChild(tr);
+    card.innerHTML = `
+      <div class="post-header">
+        <div class="post-author-box">
+          <div class="user-avatar">${sanitizeHTML(post.authorName.charAt(0).toUpperCase())}</div>
+          <div>
+            <div style="font-weight:700;font-size:0.88rem;">${sanitizeHTML(post.authorName)}</div>
+            <div style="font-size:0.72rem;color:var(--text-secondary);">${sanitizeHTML(post.authorTitle)} • ${sanitizeHTML(post.createdAt)}</div>
+          </div>
+        </div>
+        <span class="post-category-badge">${sanitizeHTML(post.category)}</span>
+      </div>
+      <h3 class="post-title">${sanitizeHTML(post.title)}</h3>
+      <p class="post-body">${sanitizeHTML(post.content)}</p>
+      ${pollHtml}
+      <div class="post-footer-bar">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="interactPost('${post.id}', 'like')">
+          ${isLiked ? '❤️ Disukai' : '🤍 Suka'} (${(post.likes || []).length})
+        </button>
+        <span style="font-size:0.78rem;color:var(--text-secondary);align-self:center;">
+          💬 ${(post.comments || []).length} Tanggapan Warga
+        </span>
+      </div>
+      <div class="comments-section">
+        ${commentsHtml}
+        <form class="comment-form" onsubmit="submitPostComment(event, '${post.id}')">
+          <input type="text" placeholder="Tulis tanggapan musyawarah..." required>
+          <button type="submit" class="btn btn-primary btn-sm">Kirim</button>
+        </form>
+      </div>
+    `;
+    container.appendChild(card);
   });
 }
 
-window.adminSetStatus = function(nik, newStatus) {
-  const users = getUsers();
-  const targetUser = users.find(u => u.nik === nik);
-  if (!targetUser) return;
-
-  targetUser.status = newStatus;
-  saveUsers(users);
-
-  showAdminAlert(`Berhasil memperbarui status warga "${targetUser.name}" menjadi ${newStatus}.`, 'success');
-  renderAdminView();
-};
-
-window.adminDeleteUser = function(nik) {
-  const users = getUsers();
-  const targetUser = users.find(u => u.nik === nik);
-  if (!targetUser) return;
-
-  if (targetUser.nik === currentUser.nik) {
-    alert('Tidak dapat menghapus akun Anda sendiri.');
-    return;
+window.interactPost = async function (postId, action, optionId = null) {
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/posts/interact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          action,
+          nik: state.currentUser.nik,
+          authorName: state.currentUser.name,
+          optionId
+        })
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
   }
 
-  const confirmDelete = confirm(`PERINGATAN: Apakah Anda yakin ingin MENGHAPUS data "${targetUser.name}" (NIK: ${targetUser.nik}) secara permanen? Tindakan ini tidak dapat dibatalkan.`);
-  if (!confirmDelete) return;
-
-  const updatedUsers = users.filter(u => u.nik !== nik);
-  saveUsers(updatedUsers);
-
-  showAdminAlert(`Data warga "${targetUser.name}" berhasil dihapus dari sistem kependudukan RT.`, 'danger');
-  renderAdminView();
+  const post = state.store.posts.find((p) => p.id === postId);
+  if (!post) return;
+  if (action === 'like') {
+    const idx = post.likes.indexOf(state.currentUser.nik);
+    if (idx === -1) post.likes.push(state.currentUser.nik);
+    else post.likes.splice(idx, 1);
+  } else if (action === 'vote' && post.poll && optionId) {
+    post.poll.options.forEach((opt) => {
+      opt.votes = opt.votes.filter((v) => v !== state.currentUser.nik);
+      if (opt.id === optionId) opt.votes.push(state.currentUser.nik);
+    });
+  }
+  saveLocalStore();
+  renderFeedPosts();
 };
 
-function showAdminAlert(message, type = 'success') {
-  adminAlert.textContent = message;
-  adminAlert.className = `alert alert-${type}`;
-  adminAlert.classList.remove('hidden');
-  setTimeout(() => {
-    adminAlert.classList.add('hidden');
-  }, 4000);
+window.submitPostComment = async function (e, postId) {
+  e.preventDefault();
+  const input = e.target.querySelector('input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/posts/interact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          action: 'comment',
+          nik: state.currentUser.nik,
+          authorName: state.currentUser.name,
+          text
+        })
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+
+  const post = state.store.posts.find((p) => p.id === postId);
+  if (!post) return;
+  post.comments.push({
+    id: `cmt_${Date.now()}`,
+    authorNik: state.currentUser.nik,
+    authorName: state.currentUser.name,
+    text,
+    time: getCurrentTime()
+  });
+  saveLocalStore();
+  renderFeedPosts();
+};
+
+// ============================================================================
+// STAGE C: CITIZEN DIRECTORY
+// ============================================================================
+function renderDirectory() {
+  const container = document.getElementById('directory-cards-container');
+  if (!container) return;
+  const q = (document.getElementById('directory-search').value || '').toLowerCase().trim();
+  container.innerHTML = '';
+
+  const activeUsers = state.store.users.filter(
+    (u) => u.status === 'Active' &&
+      (!q || u.name.toLowerCase().includes(q) || u.nik.includes(q) || (u.title || '').toLowerCase().includes(q))
+  );
+
+  activeUsers.forEach((u) => {
+    const card = document.createElement('div');
+    card.className = 'citizen-card';
+    const isMe = u.nik === state.currentUser.nik;
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <div class="user-avatar">${sanitizeHTML(u.name.charAt(0).toUpperCase())}</div>
+        <div>
+          <div style="font-weight:800;font-size:0.92rem;">${sanitizeHTML(u.name)}</div>
+          <div style="font-size:0.74rem;color:var(--primary);font-weight:600;">${sanitizeHTML(u.title || 'Warga RT')}</div>
+        </div>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);">
+        <div><strong>NIK:</strong> ${sanitizeHTML(u.nik)}</div>
+        <div><strong>Domisili:</strong> RT ${sanitizeHTML(u.rtrw)}</div>
+        <div style="margin-top:0.25rem;">${sanitizeHTML(u.bio || '')}</div>
+      </div>
+      ${!isMe ? `<button type="button" class="btn btn-secondary btn-sm" onclick="startDmFromDirectory('${u.nik}')">💬 Kirim Pesan Langsung</button>` : '<span class="badge badge-active" style="align-self:flex-start;">Profil Anda</span>'}
+    `;
+    container.appendChild(card);
+  });
 }
 
-adminSearchInput.addEventListener('input', () => {
+window.startDmFromDirectory = function (nik) {
+  const target = state.store.users.find((u) => u.nik === nik);
+  if (target) openDirectMessage(target);
+};
+
+document.getElementById('directory-search').addEventListener('input', renderDirectory);
+
+// ============================================================================
+// STAGE D: ADMIN GOVERNANCE & CLEAR DATA CONSOLE
+// ============================================================================
+function renderAdminView() {
+  if (!state.currentUser || state.currentUser.role !== 'admin') return;
+
+  const users = state.store.users;
+  document.getElementById('stat-total-citizens').textContent = users.length;
+  document.getElementById('stat-active-citizens').textContent = users.filter((u) => u.status === 'Active').length;
+  document.getElementById('stat-pending-citizens').textContent = users.filter((u) => u.status === 'Pending').length;
+  document.getElementById('stat-fictional-citizens').textContent = users.filter((u) => u.status === 'Fictional').length;
+
+  const q = (document.getElementById('admin-search-input').value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('admin-filter-status').value;
+
+  const filtered = users.filter((u) => {
+    const matchText = u.name.toLowerCase().includes(q) || u.nik.includes(q);
+    const matchStatus = statusFilter === 'ALL' || u.status === statusFilter;
+    return matchText && matchStatus;
+  });
+
+  const tbody = document.getElementById('citizens-table-body');
+  tbody.innerHTML = '';
+
+  filtered.forEach((user, idx) => {
+    const tr = document.createElement('tr');
+    let badgeClass = 'badge-active';
+    if (user.status === 'Pending') badgeClass = 'badge-pending';
+    if (user.status === 'Fictional') badgeClass = 'badge-fictional';
+
+    const isSelf = user.nik === state.currentUser.nik;
+    const actionsHtml = isSelf
+      ? '<span style="font-size:0.75rem;color:var(--text-muted);">Akun Admin Aktif</span>'
+      : `
+        <div class="table-actions">
+          ${user.status !== 'Active' ? `<button type="button" class="btn-action btn-action-activate" onclick="adminSetStatus('${user.nik}', 'Active')">Aktifkan</button>` : ''}
+          ${user.status !== 'Pending' ? `<button type="button" class="btn-action" onclick="adminSetStatus('${user.nik}', 'Pending')">Pending</button>` : ''}
+          ${user.status !== 'Fictional' ? `<button type="button" class="btn-action btn-action-flag" onclick="adminSetStatus('${user.nik}', 'Fictional')">Tandai Fiktif</button>` : ''}
+          <button type="button" class="btn-action btn-action-delete" onclick="adminDeleteUser('${user.nik}')">Hapus</button>
+        </div>
+      `;
+
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td><strong>${sanitizeHTML(user.nik)}</strong></td>
+      <td>
+        <div style="font-weight:700;">${sanitizeHTML(user.name)}</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);">${sanitizeHTML(user.title || 'Warga')}</div>
+      </td>
+      <td>RT ${sanitizeHTML(user.rtrw)}</td>
+      <td>${user.role === 'admin' ? 'Admin RT' : 'Warga'}</td>
+      <td><span class="badge ${badgeClass}">${sanitizeHTML(user.status)}</span></td>
+      <td>${actionsHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Render Audit Logs
+  const auditContainer = document.getElementById('admin-audit-list');
+  auditContainer.innerHTML = '';
+  (state.store.auditLogs || []).slice(0, 8).forEach((log) => {
+    const div = document.createElement('div');
+    div.className = 'audit-item';
+    div.innerHTML = `<strong>[${sanitizeHTML(log.time)}] ${sanitizeHTML(log.actor)}:</strong> ${sanitizeHTML(log.action)}`;
+    auditContainer.appendChild(div);
+  });
+}
+
+window.adminSetStatus = async function (nik, status) {
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/admin/citizen-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nik, status, actorName: state.currentUser.name })
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+  const target = state.store.users.find((u) => u.nik === nik);
+  if (!target) return;
+  target.status = status;
+  state.store.auditLogs.unshift({
+    id: `log_${Date.now()}`,
+    time: getCurrentTime(),
+    actor: state.currentUser.name,
+    action: `Mengubah status ${target.name} (${target.nik}) menjadi ${status}`
+  });
+  saveLocalStore();
   renderAdminView();
-});
+  renderSidebarLists();
+};
 
-adminFilterStatus.addEventListener('change', () => {
+window.adminDeleteUser = async function (nik) {
+  const target = state.store.users.find((u) => u.nik === nik);
+  if (!target || target.nik === state.currentUser.nik) return;
+  if (!confirm(`Hapus permanen data "${target.name}" (NIK: ${target.nik})?`)) return;
+
+  if (state.serverOnline) {
+    try {
+      await fetch(`/api/admin/citizen/${encodeURIComponent(nik)}`, { method: 'DELETE' });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+
+  state.store.users = state.store.users.filter((u) => u.nik !== nik);
+  state.store.auditLogs.unshift({
+    id: `log_${Date.now()}`,
+    time: getCurrentTime(),
+    actor: state.currentUser.name,
+    action: `Menghapus permanen data ${target.name} (NIK: ${target.nik})`
+  });
+  saveLocalStore();
   renderAdminView();
-});
+  renderSidebarLists();
+};
 
-document.getElementById('btn-admin-reset-data').addEventListener('click', () => {
-  const confirmReset = confirm('Apakah Anda yakin ingin mengembalikan seluruh data warga dan pesan ke data awal dummy prototype?');
-  if (confirmReset) {
-    initializeStorage(true);
-    showAdminAlert('Seluruh data prototype telah di-reset ke kondisi awal.', 'warning');
-    renderAdminView();
-  }
-});
+document.getElementById('admin-search-input').addEventListener('input', renderAdminView);
+document.getElementById('admin-filter-status').addEventListener('change', renderAdminView);
 
-window.addEventListener('storage', (e) => {
-  if (e.key === STORAGE_KEYS.USERS) {
-    if (!adminView.classList.contains('hidden')) {
-      renderAdminView();
-    }
-    if (!mainView.classList.contains('hidden')) {
-      renderContactsList(document.getElementById('contact-search').value);
+document.getElementById('btn-admin-reset-data').addEventListener('click', async () => {
+  if (!confirm('Reset seluruh data ke kondisi awal?')) return;
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/admin/reset', { method: 'POST' });
+      return;
+    } catch {
+      // Fallback local
     }
   }
-  if (e.key === STORAGE_KEYS.MESSAGES) {
-    if (!mainView.classList.contains('hidden')) {
-      renderChatMessages();
-    }
-  }
+  loadLocalStore(true);
+  refreshAllViews();
 });
 
-window.addEventListener('DOMContentLoaded', () => {
-  initializeStorage(false);
+// Mobile toggles
+document.getElementById('mobile-toggle-sidebar').addEventListener('click', () => {
+  document.getElementById('app-sidebar').classList.toggle('open');
+});
 
-  const existingSession = getSession();
-  if (existingSession) {
-    currentUser = existingSession;
-    showView('main');
-  } else {
-    showView('auth');
+document.getElementById('mobile-toggle-info').addEventListener('click', () => {
+  document.getElementById('context-drawer').classList.toggle('hidden');
+});
+
+// Bootstrap
+window.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
+  await initDataLayer();
+
+  const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
+  if (savedSession) {
+    try {
+      state.currentUser = JSON.parse(savedSession);
+      enterWorkspace();
+      return;
+    } catch {
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
+    }
   }
 });

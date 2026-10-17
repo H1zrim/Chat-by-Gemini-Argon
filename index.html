@@ -1,113 +1,228 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RT-Ku - Aplikasi Komunitas & Komunikasi Warga RT</title>
+  <title>RT-Ku v0.2 — Platform Komunitas Sosial & Obrolan Warga Real-Time</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ================= AUTH VIEW (LOGIN & REGISTER) ================= -->
+  <!-- ================= 1. AUTHENTICATION SCREEN ================= -->
   <div id="auth-view" class="view-screen">
-    <div class="auth-card">
-      <div class="auth-header">
-        <div class="brand-logo">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-          </svg>
+    <div class="auth-shell">
+      <!-- Left Hero Showcase (Meta Workplace / Mattermost Inspired) -->
+      <div class="auth-showcase">
+        <div class="showcase-badge">RT-Ku v0.2 • Community OS</div>
+        <h2>Satu Ruang Digital untuk Komunikasi, Musyawarah, dan Tata Kelola Warga RT.</h2>
+        <p>Menggabungkan kecepatan obrolan saluran terstruktur (Mattermost &amp; Zulip) dengan beranda sosial komunitas ala Meta Workplace.</p>
+        <div class="showcase-features">
+          <div class="showcase-item">
+            <span class="showcase-icon">⚡</span>
+            <div>
+              <strong>Real-Time Channels &amp; Topik</strong>
+              <span>Saluran publik, balasan berulir (thread), sematan pesan, dan reaksi instan.</span>
+            </div>
+          </div>
+          <div class="showcase-item">
+            <span class="showcase-icon">🌐</span>
+            <div>
+              <strong>Beranda Sosial &amp; Polling Warga</strong>
+              <span>Pengumuman resmi RT, transparansi kas, diskusi beranda, dan e-voting musyawarah.</span>
+            </div>
+          </div>
+          <div class="showcase-item">
+            <span class="showcase-icon">🛡️</span>
+            <div>
+              <strong>Tata Kelola NIK &amp; Clear Data</strong>
+              <span>Verifikasi warga aktif, deteksi akun fiktif, dan log audit pengurus RT.</span>
+            </div>
+          </div>
         </div>
-        <h1 class="brand-title">RT-Ku</h1>
-        <p class="brand-subtitle">Portal Komunikasi & Data Warga Rukun Tetangga</p>
       </div>
 
-      <!-- Demo Quick Fill Helper -->
-      <div class="demo-credentials-banner">
-        <div class="demo-title">Akun Uji Coba (Klik untuk mengisi cepat):</div>
-        <div class="demo-buttons">
-          <button type="button" class="btn-chip" id="quick-fill-admin">
-            <strong>Admin:</strong> 3201010101900001
-          </button>
-          <button type="button" class="btn-chip" id="quick-fill-citizen">
-            <strong>Warga:</strong> 3201010202920002
-          </button>
+      <!-- Right Auth Card -->
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="brand-logo">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">RT-Ku <span class="version-pill">v0.2</span></h1>
+            <p class="brand-subtitle">Portal Komunitas &amp; Komunikasi Warga RT 003 / RW 005</p>
+          </div>
         </div>
+
+        <!-- Demo Quick Fill Helper -->
+        <div class="demo-credentials-banner">
+          <div class="demo-title">Pilih Akun Uji Coba Instan (1-Klik):</div>
+          <div class="demo-buttons">
+            <button type="button" class="btn-chip" id="quick-fill-admin">
+              <strong>Ketua RT (Admin)</strong>
+              <span>3201010101900001</span>
+            </button>
+            <button type="button" class="btn-chip" id="quick-fill-citizen">
+              <strong>Siti (Warga PKK)</strong>
+              <span>3201010202920002</span>
+            </button>
+            <button type="button" class="btn-chip" id="quick-fill-security">
+              <strong>Budi (Keamanan)</strong>
+              <span>3201010303950003</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Auth Tabs -->
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" id="tab-login-btn">Masuk</button>
+          <button type="button" class="auth-tab" id="tab-register-btn">Daftar Warga Baru</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form active">
+          <div id="login-alert" class="alert hidden"></div>
+
+          <div class="form-group">
+            <label for="login-nik">Nomor Induk Kependudukan (NIK)</label>
+            <input type="text" id="login-nik" placeholder="Masukkan 16 digit NIK" required maxlength="16" autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">Kata Sandi</label>
+            <input type="password" id="login-password" placeholder="Masukkan kata sandi" required autocomplete="current-password">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Masuk ke Workspace RT-Ku</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" class="auth-form">
+          <div id="register-alert" class="alert hidden"></div>
+
+          <div class="form-group">
+            <label for="reg-nik">Nomor Induk Kependudukan (NIK)</label>
+            <input type="text" id="reg-nik" placeholder="Contoh: 3201010505990005" required maxlength="16">
+            <small class="form-hint">Wajib 16 digit angka sesuai KTP/KK.</small>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-name">Nama Lengkap</label>
+              <input type="text" id="reg-name" placeholder="Nama sesuai KTP" required>
+            </div>
+            <div class="form-group">
+              <label for="reg-rtrw">RT / RW</label>
+              <input type="text" id="reg-rtrw" placeholder="003/005" value="003/005" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-title">Peran / Blok Rumah</label>
+              <input type="text" id="reg-title" placeholder="Contoh: Warga Blok B No. 8">
+            </div>
+            <div class="form-group">
+              <label for="reg-password">Kata Sandi</label>
+              <input type="password" id="reg-password" placeholder="Min. 4 karakter" required minlength="4">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Daftarkan NIK Warga</button>
+        </form>
       </div>
-
-      <!-- Auth Tabs -->
-      <div class="auth-tabs">
-        <button type="button" class="auth-tab active" id="tab-login-btn">Masuk</button>
-        <button type="button" class="auth-tab" id="tab-register-btn">Daftar Warga Baru</button>
-      </div>
-
-      <!-- Login Form -->
-      <form id="login-form" class="auth-form active">
-        <div id="login-alert" class="alert hidden"></div>
-
-        <div class="form-group">
-          <label for="login-nik">Nomor Induk Kependudukan (NIK)</label>
-          <input type="text" id="login-nik" placeholder="Masukkan 16 digit NIK" required maxlength="16" autocomplete="username">
-        </div>
-
-        <div class="form-group">
-          <label for="login-password">Kata Sandi</label>
-          <input type="password" id="login-password" placeholder="Masukkan kata sandi" required autocomplete="current-password">
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">Masuk ke RT-Ku</button>
-      </form>
-
-      <!-- Register Form -->
-      <form id="register-form" class="auth-form">
-        <div id="register-alert" class="alert hidden"></div>
-
-        <div class="form-group">
-          <label for="reg-nik">Nomor Induk Kependudukan (NIK)</label>
-          <input type="text" id="reg-nik" placeholder="Contoh: 3201010505990005" required maxlength="16">
-          <small class="form-hint">NIK harus 16 digit angka valid.</small>
-        </div>
-
-        <div class="form-group">
-          <label for="reg-name">Nama Lengkap</label>
-          <input type="text" id="reg-name" placeholder="Nama sesuai KTP" required>
-        </div>
-
-        <div class="form-group">
-          <label for="reg-rtrw">RT / RW</label>
-          <input type="text" id="reg-rtrw" placeholder="Contoh: 003/005" required>
-        </div>
-
-        <div class="form-group">
-          <label for="reg-password">Kata Sandi</label>
-          <input type="password" id="reg-password" placeholder="Minimal 4 karakter" required minlength="4">
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">Daftar Sebagai Warga</button>
-      </form>
     </div>
   </div>
 
-  <!-- ================= CITIZEN MAIN APP (2-COLUMN CHAT VIEW) ================= -->
+  <!-- ================= 2. UNIFIED WORKSPACE SHELL ================= -->
   <div id="main-view" class="view-screen hidden">
-    <!-- Top Mobile Header -->
+    <!-- Mobile Top Bar -->
     <header class="mobile-header">
-      <button type="button" id="mobile-toggle-sidebar" class="btn-icon" aria-label="Menu">
+      <button type="button" id="mobile-toggle-sidebar" class="btn-icon" aria-label="Buka Menu">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="12" x2="21" y2="12"></line>
           <line x1="3" y1="6" x2="21" y2="6"></line>
           <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
       </button>
-      <span class="mobile-brand">RT-Ku</span>
-      <div id="mobile-admin-btn-wrap"></div>
+      <div class="mobile-brand">RT-Ku <span>v0.2</span></div>
+      <button type="button" id="mobile-toggle-info" class="btn-icon" aria-label="Info Komunitas">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+      </button>
     </header>
 
-    <div class="app-layout">
-      <!-- Left Column: Sidebar -->
+    <div class="workspace-grid">
+      <!-- PANE 1: LEFTMOST NAVIGATION RAIL (Meta / Discord / Mattermost Switcher) -->
+      <nav class="nav-rail" aria-label="Navigasi Utama">
+        <div class="rail-brand" title="RT-Ku Community OS">RT</div>
+
+        <div class="rail-items">
+          <button type="button" class="rail-btn active" data-nav="chat" title="Obrolan &amp; Saluran (Chat)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="rail-label">Chat</span>
+          </button>
+
+          <button type="button" class="rail-btn" data-nav="feed" title="Beranda Komunitas &amp; Musyawarah (Meta Feed)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            <span class="rail-label">Beranda</span>
+          </button>
+
+          <button type="button" class="rail-btn" data-nav="directory" title="Direktori Warga Aktif">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span class="rail-label">Warga</span>
+          </button>
+
+          <button type="button" class="rail-btn hidden" id="rail-admin-btn" data-nav="admin" title="Panel Admin &amp; Clear Data">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span class="rail-label">Admin</span>
+          </button>
+        </div>
+
+        <div class="rail-footer">
+          <button type="button" class="rail-btn" id="btn-theme-toggle" title="Ganti Tema Terang / Gelap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+          <button type="button" class="rail-btn rail-logout" id="btn-logout" title="Keluar (Logout)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      <!-- PANE 2: CHANNELS & CITIZENS SIDEBAR -->
       <aside class="sidebar" id="app-sidebar">
-        <!-- Sidebar Header: Profile -->
         <div class="sidebar-header">
+          <div class="community-banner">
+            <div>
+              <h2 class="community-name">RT 003 / RW 005</h2>
+              <span class="engine-badge" id="engine-status-badge">⚡ Sinkronisasi Aktif</span>
+            </div>
+          </div>
+
           <div class="user-profile-badge">
             <div class="user-avatar" id="sidebar-avatar">U</div>
             <div class="user-info">
@@ -118,179 +233,275 @@
           </div>
         </div>
 
-        <!-- Admin Shortcut (Visible only if user is Admin) -->
-        <div id="sidebar-admin-section" class="sidebar-admin-box hidden">
-          <button type="button" id="btn-goto-admin" class="btn btn-admin btn-block">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            Buka Panel Admin RT
-          </button>
-        </div>
-
-        <!-- Search Bar -->
+        <!-- Search Input -->
         <div class="sidebar-search">
           <div class="search-input-wrapper">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="contact-search" placeholder="Cari warga / grup RT...">
+            <input type="text" id="contact-search" placeholder="Cari saluran atau warga... (Ctrl+K)">
           </div>
         </div>
 
-        <!-- Contacts / Groups List -->
+        <!-- Channels & Direct Messages List -->
         <div class="sidebar-list-container">
-          <div class="list-section-title">Saluran & Warga Aktif</div>
-          <div class="contacts-list" id="contacts-list">
-            <!-- Populated via script.js -->
-          </div>
-        </div>
+          <div class="list-section-title">Saluran Komunitas (Channels)</div>
+          <div class="contacts-list" id="channels-list"></div>
 
-        <!-- Sidebar Footer: Logout -->
-        <div class="sidebar-footer">
-          <button type="button" class="btn btn-logout btn-block" id="btn-logout">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Keluar (Logout)
-          </button>
+          <div class="list-section-title" style="margin-top: 1rem;">Pesan Langsung (Warga Aktif)</div>
+          <div class="contacts-list" id="contacts-list"></div>
         </div>
       </aside>
 
-      <!-- Right Column: Chat Area -->
-      <main class="chat-area" id="app-chat-area">
-        <!-- Chat Header -->
-        <div class="chat-header">
-          <div class="chat-header-info">
-            <div class="chat-header-avatar" id="chat-current-avatar">RT</div>
+      <!-- PANE 3: MAIN STAGE (Switches between Chat, Meta Feed, Directory, Admin) -->
+      <main class="main-stage">
+
+        <!-- STAGE A: REAL-TIME CHAT AREA -->
+        <section id="stage-chat" class="stage-panel">
+          <header class="chat-header">
+            <div class="chat-header-info">
+              <div class="chat-header-avatar" id="chat-current-avatar">#</div>
+              <div>
+                <div class="chat-title-row">
+                  <h2 class="chat-title" id="chat-current-title">Forum Warga RT 003</h2>
+                  <span class="topic-pill" id="chat-current-badge">Utama</span>
+                </div>
+                <p class="chat-status" id="chat-current-subtitle">Saluran Publik Warga RT Aktif</p>
+              </div>
+            </div>
+
+            <div class="chat-header-actions">
+              <div class="chat-search-inline">
+                <input type="text" id="chat-message-filter" placeholder="Cari isi pesan...">
+              </div>
+              <button type="button" class="btn-icon" id="btn-toggle-drawer" title="Tampilkan Info &amp; Pesan Disematkan">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <line x1="15" y1="3" x2="15" y2="21"></line>
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <!-- Pinned Message Highlight Banner -->
+          <div id="pinned-banner" class="pinned-banner hidden">
+            <span class="pin-icon">📌</span>
+            <div class="pin-text" id="pinned-banner-text"></div>
+          </div>
+
+          <!-- Message Stream -->
+          <div class="chat-messages" id="chat-messages-container"></div>
+
+          <!-- Reply Preview Bar (Zulip / Mattermost Threading) -->
+          <div id="reply-preview-bar" class="reply-preview-bar hidden">
+            <div class="reply-info">
+              <strong>Membalas <span id="reply-target-name"></span>:</strong>
+              <span id="reply-target-text"></span>
+            </div>
+            <button type="button" id="btn-cancel-reply" class="btn-icon">✕</button>
+          </div>
+
+          <!-- Composer Input Form -->
+          <form class="chat-input-area" id="chat-form">
+            <input
+              type="text"
+              id="chat-input-topic"
+              class="topic-input"
+              placeholder="Topik (opsional)"
+              maxlength="32"
+              title="Topik percakapan ala Zulip"
+            >
+            <input
+              type="text"
+              id="chat-input-text"
+              class="message-input"
+              placeholder="Tulis pesan ke saluran atau warga..."
+              autocomplete="off"
+              required
+            >
+            <button type="submit" class="btn btn-send" id="btn-send-message">
+              <span>Kirim</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+        </section>
+
+        <!-- STAGE B: META WORKPLACE / HUMHUB COMMUNITY FEED -->
+        <section id="stage-feed" class="stage-panel hidden">
+          <header class="stage-top-header">
             <div>
-              <h2 class="chat-title" id="chat-current-title">Forum Warga RT 003</h2>
-              <p class="chat-status" id="chat-current-subtitle">Saluran Publik Warga RT Aktif</p>
+              <h2>Beranda Komunitas &amp; Musyawarah Warga</h2>
+              <p>Pengumuman resmi RT, laporan kegiatan, diskusi terbuka, dan e-voting warga.</p>
+            </div>
+            <div class="feed-filter-pills" id="feed-category-filters">
+              <button type="button" class="pill-btn active" data-cat="ALL">Semua</button>
+              <button type="button" class="pill-btn" data-cat="Pengumuman Resmi">Pengumuman</button>
+              <button type="button" class="pill-btn" data-cat="Kegiatan Warga">Kegiatan</button>
+              <button type="button" class="pill-btn" data-cat="Diskusi Warga">Diskusi &amp; Usulan</button>
+            </div>
+          </header>
+
+          <div class="feed-scroll-area">
+            <!-- Create Post Composer Card -->
+            <form id="feed-post-form" class="feed-composer-card">
+              <div class="composer-top">
+                <input type="text" id="post-title" placeholder="Judul pengumuman, usulan, atau informasi warga..." required>
+                <select id="post-category">
+                  <option value="Diskusi Warga">💬 Diskusi &amp; Usulan</option>
+                  <option value="Kegiatan Warga">📅 Kegiatan Warga</option>
+                  <option value="Pengumuman Resmi">📢 Pengumuman Resmi</option>
+                  <option value="Laporan Lingkungan">🚨 Laporan Lingkungan</option>
+                </select>
+              </div>
+              <textarea id="post-content" rows="3" placeholder="Bagikan informasi, agenda kerja bakti, laporan keamanan, atau buka musyawarah..." required></textarea>
+
+              <!-- Optional Poll Builder -->
+              <div id="poll-builder" class="poll-builder hidden">
+                <input type="text" id="poll-question" placeholder="Pertanyaan Polling / Musyawarah (contoh: Setuju kerja bakti Minggu pagi?)">
+                <input type="text" id="poll-options" placeholder="Opsi dipisahkan koma (contoh: Setuju Jam 07.00, Setuju Jam 08.00, Usul Hari Sabtu)">
+              </div>
+
+              <div class="composer-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-poll">
+                  📊 + Buat Polling Musyawarah
+                </button>
+                <button type="submit" class="btn btn-primary btn-sm">Terbitkan ke Beranda RT</button>
+              </div>
+            </form>
+
+            <!-- Feed Stream Container -->
+            <div id="feed-posts-container" class="feed-posts-list"></div>
+          </div>
+        </section>
+
+        <!-- STAGE C: CITIZEN DIRECTORY -->
+        <section id="stage-directory" class="stage-panel hidden">
+          <header class="stage-top-header">
+            <div>
+              <h2>Direktori Warga Terverifikasi RT 003 / RW 005</h2>
+              <p>Daftar warga berstatus Aktif yang telah tervalidasi NIK kependudukannya.</p>
+            </div>
+            <input type="text" id="directory-search" class="header-search" placeholder="Cari nama, peran, atau NIK...">
+          </header>
+          <div class="directory-grid" id="directory-cards-container"></div>
+        </section>
+
+        <!-- STAGE D: ADMIN GOVERNANCE & CLEAR DATA CONSOLE -->
+        <section id="stage-admin" class="stage-panel hidden">
+          <header class="stage-top-header">
+            <div>
+              <h2>Panel Tata Kelola Pengurus RT &amp; Clear Data (CRUD)</h2>
+              <p>Verifikasi warga baru, bersihkan akun fiktif/spammer, dan pantau log audit sistem.</p>
+            </div>
+            <div class="admin-header-actions">
+              <button type="button" id="btn-admin-reset-data" class="btn btn-warning btn-sm">
+                ↺ Reset Data Awal
+              </button>
+            </div>
+          </header>
+
+          <div class="admin-scroll-area">
+            <div class="admin-stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="stat-total-citizens">0</div>
+                <div class="stat-label">Total Terdaftar</div>
+              </div>
+              <div class="stat-card stat-card-active">
+                <div class="stat-number" id="stat-active-citizens">0</div>
+                <div class="stat-label">Warga Aktif</div>
+              </div>
+              <div class="stat-card stat-card-pending">
+                <div class="stat-number" id="stat-pending-citizens">0</div>
+                <div class="stat-label">Menunggu Verifikasi</div>
+              </div>
+              <div class="stat-card stat-card-fictional">
+                <div class="stat-number" id="stat-fictional-citizens">0</div>
+                <div class="stat-label">Data Fiktif / Palsu</div>
+              </div>
+            </div>
+
+            <div class="admin-card">
+              <div class="admin-toolbar">
+                <div class="toolbar-search">
+                  <input type="text" id="admin-search-input" placeholder="Cari NIK atau Nama warga...">
+                </div>
+                <div class="toolbar-filters">
+                  <label for="admin-filter-status">Status:</label>
+                  <select id="admin-filter-status">
+                    <option value="ALL">Semua Status</option>
+                    <option value="Active">Aktif (Active)</option>
+                    <option value="Pending">Menunggu (Pending)</option>
+                    <option value="Fictional">Fiktif (Fictional)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="admin-alert" class="alert hidden"></div>
+
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>No</th>
+                      <th>NIK</th>
+                      <th>Nama &amp; Jabatan</th>
+                      <th>RT / RW</th>
+                      <th>Role</th>
+                      <th>Status Kependudukan</th>
+                      <th>Aksi Bersihkan Data</th>
+                    </tr>
+                  </thead>
+                  <tbody id="citizens-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Security & Governance Audit Log -->
+            <div class="admin-card" style="margin-top: 1.25rem;">
+              <h3 class="section-subtitle">Log Audit Aktivitas &amp; Moderasi Pengurus</h3>
+              <div id="admin-audit-list" class="audit-list"></div>
             </div>
           </div>
-          <div class="chat-header-actions">
-            <span class="status-indicator online"></span>
-            <span class="status-text">Terhubung</span>
-          </div>
-        </div>
+        </section>
 
-        <!-- Message History -->
-        <div class="chat-messages" id="chat-messages-container">
-          <!-- Chat bubbles populated dynamically via script.js -->
-        </div>
-
-        <!-- Chat Input Form -->
-        <form class="chat-input-area" id="chat-form">
-          <input 
-            type="text" 
-            id="chat-input-text" 
-            placeholder="Tulis pesan untuk warga RT..." 
-            autocomplete="off"
-            required
-          >
-          <button type="submit" class="btn btn-send" id="btn-send-message" aria-label="Kirim Pesan">
-            <span>Kirim</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
-        </form>
       </main>
-    </div>
-  </div>
 
-  <!-- ================= ADMIN PANEL (CLEAR DATA CRUD) ================= -->
-  <div id="admin-view" class="view-screen hidden">
-    <div class="admin-container">
-      <!-- Admin Top Navbar -->
-      <header class="admin-navbar">
-        <div class="admin-navbar-brand">
-          <div class="brand-badge-admin">Admin RT</div>
-          <div>
-            <h1>Dashboard Panel Pengurus RT</h1>
-            <p>Manajemen & Pembersihan Data Warga (CRUD Clear Data)</p>
+      <!-- PANE 4: RIGHT CONTEXTUAL INSPECTOR DRAWER -->
+      <aside class="context-drawer" id="context-drawer">
+        <div class="drawer-section">
+          <h3 class="drawer-title">Informasi Saluran</h3>
+          <p class="drawer-desc" id="drawer-channel-desc">
+            Saluran komunikasi terpadu warga RT 003 / RW 005.
+          </p>
+        </div>
+
+        <div class="drawer-section">
+          <h3 class="drawer-title">📌 Pesan Disematkan (Pinned)</h3>
+          <div id="drawer-pinned-list" class="drawer-pinned-list"></div>
+        </div>
+
+        <div class="drawer-section">
+          <h3 class="drawer-title">📊 Ringkasan Lingkungan RT 003</h3>
+          <div class="rt-info-cards">
+            <div class="mini-info-card">
+              <span class="mini-label">Saldo Kas RT Bulan Ini</span>
+              <strong class="mini-value text-success">Rp 8.450.000</strong>
+            </div>
+            <div class="mini-info-card">
+              <span class="mini-label">Jadwal Kerja Bakti</span>
+              <strong class="mini-value">Minggu, 07.00 WIB</strong>
+            </div>
+            <div class="mini-info-card">
+              <span class="mini-label">Pos Keamanan / Siskamling</span>
+              <strong class="mini-value">Siaga Aktif (Blok A–D)</strong>
+            </div>
           </div>
         </div>
-        <div class="admin-navbar-actions">
-          <button type="button" id="btn-admin-back-chat" class="btn btn-secondary">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            Kembali ke Obrolan
-          </button>
-          <button type="button" id="btn-admin-logout" class="btn btn-logout">
-            Keluar
-          </button>
-        </div>
-      </header>
-
-      <!-- Admin Stats Summary Cards -->
-      <div class="admin-stats-grid">
-        <div class="stat-card">
-          <div class="stat-number" id="stat-total-citizens">0</div>
-          <div class="stat-label">Total Data Terdaftar</div>
-        </div>
-        <div class="stat-card stat-card-active">
-          <div class="stat-number" id="stat-active-citizens">0</div>
-          <div class="stat-label">Warga Aktif</div>
-        </div>
-        <div class="stat-card stat-card-pending">
-          <div class="stat-number" id="stat-pending-citizens">0</div>
-          <div class="stat-label">Menunggu Verifikasi</div>
-        </div>
-        <div class="stat-card stat-card-fictional">
-          <div class="stat-number" id="stat-fictional-citizens">0</div>
-          <div class="stat-label">Data Fiktif / Palsu</div>
-        </div>
-      </div>
-
-      <!-- Main Admin Table Card -->
-      <div class="admin-card">
-        <div class="admin-toolbar">
-          <div class="toolbar-search">
-            <input type="text" id="admin-search-input" placeholder="Cari NIK atau Nama warga...">
-          </div>
-          <div class="toolbar-filters">
-            <label for="admin-filter-status">Filter Status:</label>
-            <select id="admin-filter-status">
-              <option value="ALL">Semua Status</option>
-              <option value="Active">Hanya Aktif</option>
-              <option value="Pending">Hanya Menunggu</option>
-              <option value="Fictional">Hanya Fiktif</option>
-            </select>
-            <button type="button" id="btn-admin-reset-data" class="btn btn-warning" title="Kembalikan dummy data awal">
-              Reset Data Awal
-            </button>
-          </div>
-        </div>
-
-        <!-- Alert box for Admin notifications -->
-        <div id="admin-alert" class="alert hidden"></div>
-
-        <!-- Citizens Table -->
-        <div class="table-responsive">
-          <table class="data-table" id="citizens-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>NIK</th>
-                <th>Nama Lengkap</th>
-                <th>RT / RW</th>
-                <th>Role</th>
-                <th>Status Kependudukan</th>
-                <th>Aksi Bersihkan Data</th>
-              </tr>
-            </thead>
-            <tbody id="citizens-table-body">
-              <!-- Rendered dynamically by script.js -->
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </aside>
     </div>
   </div>
 
