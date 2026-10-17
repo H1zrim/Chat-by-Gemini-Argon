@@ -1,0 +1,52 @@
+# Environment & Secrets (Confidentiality & AI API Keys)
+.env
+.env.*
+*.env
+!.env.example
+.secret*
+*secret*
+*credentials*
+*api_key*
+*apikey*
+*.pem
+*.key
+*.cert
+
+# AI & Agent Configs
+.gemini/
+.claude/
+.cursor/
+.aider*
+mcp_config*
+
+# Dependencies & Build Artifacts
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+vendor/
+
+# Database & Local Storage Dumps
+*.sqlite
+*.sqlite3
+*.db
+*.sql.gz
+data/private/
+
+# Logs & OS Files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Directories
+.vscode/
+.idea/
+*.swp
+*.swo
