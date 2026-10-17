@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RT-Ku v0.2 — Platform Komunitas Sosial & Obrolan Warga Real-Time</title>
+  <title>RT-Ku v0.3 — Platform Komunitas Sosial, Obrolan &amp; Kas Warga Transparan</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,11 +11,10 @@
   <!-- ================= 1. AUTHENTICATION SCREEN ================= -->
   <div id="auth-view" class="view-screen">
     <div class="auth-shell">
-      <!-- Left Hero Showcase (Meta Workplace / Mattermost Inspired) -->
       <div class="auth-showcase">
-        <div class="showcase-badge">RT-Ku v0.2 • Community OS</div>
-        <h2>Satu Ruang Digital untuk Komunikasi, Musyawarah, dan Tata Kelola Warga RT.</h2>
-        <p>Menggabungkan kecepatan obrolan saluran terstruktur (Mattermost &amp; Zulip) dengan beranda sosial komunitas ala Meta Workplace.</p>
+        <div class="showcase-badge">RT-Ku v0.3 • Native SQLite + SSE</div>
+        <h2>Satu Ruang Digital untuk Komunikasi, Musyawarah, Kas Transparan &amp; Tata Kelola Warga RT.</h2>
+        <p>Menggabungkan kecepatan obrolan saluran terstruktur (Mattermost &amp; Zulip), beranda sosial (Meta Workplace), dan Buku Kas RT Terbuka.</p>
         <div class="showcase-features">
           <div class="showcase-item">
             <span class="showcase-icon">⚡</span>
@@ -25,23 +24,22 @@
             </div>
           </div>
           <div class="showcase-item">
-            <span class="showcase-icon">🌐</span>
+            <span class="showcase-icon">💰</span>
             <div>
-              <strong>Beranda Sosial &amp; Polling Warga</strong>
-              <span>Pengumuman resmi RT, transparansi kas, diskusi beranda, dan e-voting musyawarah.</span>
+              <strong>Buku Kas &amp; Iuran Warga Transparan (Fokus v0.3)</strong>
+              <span>Laporan pemasukan/pengeluaran real-time dan pelacakan status iuran bulanan warga.</span>
             </div>
           </div>
           <div class="showcase-item">
-            <span class="showcase-icon">🛡️</span>
+            <span class="showcase-icon">🌐</span>
             <div>
-              <strong>Tata Kelola NIK &amp; Clear Data</strong>
-              <span>Verifikasi warga aktif, deteksi akun fiktif, dan log audit pengurus RT.</span>
+              <strong>Beranda Sosial, Polling &amp; Clear Data NIK</strong>
+              <span>E-voting musyawarah warga, direktori warga aktif, serta deteksi akun fiktif.</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Right Auth Card -->
       <div class="auth-card">
         <div class="auth-header">
           <div class="brand-logo">
@@ -51,12 +49,11 @@
             </svg>
           </div>
           <div>
-            <h1 class="brand-title">RT-Ku <span class="version-pill">v0.2</span></h1>
-            <p class="brand-subtitle">Portal Komunitas &amp; Komunikasi Warga RT 003 / RW 005</p>
+            <h1 class="brand-title">RT-Ku <span class="version-pill">v0.3</span></h1>
+            <p class="brand-subtitle">Portal Komunitas &amp; Kas Transparan Warga RT 003 / RW 005</p>
           </div>
         </div>
 
-        <!-- Demo Quick Fill Helper -->
         <div class="demo-credentials-banner">
           <div class="demo-title">Pilih Akun Uji Coba Instan (1-Klik):</div>
           <div class="demo-buttons">
@@ -69,19 +66,17 @@
               <span>3201010202920002</span>
             </button>
             <button type="button" class="btn-chip" id="quick-fill-security">
-              <strong>Budi (Keamanan)</strong>
-              <span>3201010303950003</span>
+              <strong>Rina (Bendahara)</strong>
+              <span>3201010606930006</span>
             </button>
           </div>
         </div>
 
-        <!-- Auth Tabs -->
         <div class="auth-tabs">
           <button type="button" class="auth-tab active" id="tab-login-btn">Masuk</button>
           <button type="button" class="auth-tab" id="tab-register-btn">Daftar Warga Baru</button>
         </div>
 
-        <!-- Login Form -->
         <form id="login-form" class="auth-form active">
           <div id="login-alert" class="alert hidden"></div>
 
@@ -98,7 +93,6 @@
           <button type="submit" class="btn btn-primary btn-block">Masuk ke Workspace RT-Ku</button>
         </form>
 
-        <!-- Register Form -->
         <form id="register-form" class="auth-form">
           <div id="register-alert" class="alert hidden"></div>
 
@@ -138,7 +132,6 @@
 
   <!-- ================= 2. UNIFIED WORKSPACE SHELL ================= -->
   <div id="main-view" class="view-screen hidden">
-    <!-- Mobile Top Bar -->
     <header class="mobile-header">
       <button type="button" id="mobile-toggle-sidebar" class="btn-icon" aria-label="Buka Menu">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -147,7 +140,7 @@
           <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
       </button>
-      <div class="mobile-brand">RT-Ku <span>v0.2</span></div>
+      <div class="mobile-brand">RT-Ku <span>v0.3</span></div>
       <button type="button" id="mobile-toggle-info" class="btn-icon" aria-label="Info Komunitas">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
@@ -158,20 +151,20 @@
     </header>
 
     <div class="workspace-grid">
-      <!-- PANE 1: LEFTMOST NAVIGATION RAIL (Meta / Discord / Mattermost Switcher) -->
+      <!-- PANE 1: LEFTMOST NAVIGATION RAIL -->
       <nav class="nav-rail" aria-label="Navigasi Utama">
         <div class="rail-brand" title="RT-Ku Community OS">RT</div>
 
         <div class="rail-items">
           <button type="button" class="rail-btn active" data-nav="chat" title="Obrolan &amp; Saluran (Chat)">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             <span class="rail-label">Chat</span>
           </button>
 
           <button type="button" class="rail-btn" data-nav="feed" title="Beranda Komunitas &amp; Musyawarah (Meta Feed)">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="3" y1="9" x2="21" y2="9"></line>
               <line x1="9" y1="21" x2="9" y2="9"></line>
@@ -179,8 +172,16 @@
             <span class="rail-label">Beranda</span>
           </button>
 
+          <button type="button" class="rail-btn" data-nav="finance" title="Buku Kas &amp; Iuran Warga Transparan">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+              <line x1="2" y1="10" x2="22" y2="10"></line>
+            </svg>
+            <span class="rail-label">Kas RT</span>
+          </button>
+
           <button type="button" class="rail-btn" data-nav="directory" title="Direktori Warga Aktif">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -190,7 +191,7 @@
           </button>
 
           <button type="button" class="rail-btn hidden" id="rail-admin-btn" data-nav="admin" title="Panel Admin &amp; Clear Data">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             <span class="rail-label">Admin</span>
@@ -199,12 +200,12 @@
 
         <div class="rail-footer">
           <button type="button" class="rail-btn" id="btn-theme-toggle" title="Ganti Tema Terang / Gelap">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
           <button type="button" class="rail-btn rail-logout" id="btn-logout" title="Keluar (Logout)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
               <polyline points="16 17 21 12 16 7"></polyline>
               <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -233,7 +234,6 @@
           </div>
         </div>
 
-        <!-- Search Input -->
         <div class="sidebar-search">
           <div class="search-input-wrapper">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -244,7 +244,6 @@
           </div>
         </div>
 
-        <!-- Channels & Direct Messages List -->
         <div class="sidebar-list-container">
           <div class="list-section-title">Saluran Komunitas (Channels)</div>
           <div class="contacts-list" id="channels-list"></div>
@@ -254,7 +253,7 @@
         </div>
       </aside>
 
-      <!-- PANE 3: MAIN STAGE (Switches between Chat, Meta Feed, Directory, Admin) -->
+      <!-- PANE 3: MAIN STAGE -->
       <main class="main-stage">
 
         <!-- STAGE A: REAL-TIME CHAT AREA -->
@@ -284,16 +283,13 @@
             </div>
           </header>
 
-          <!-- Pinned Message Highlight Banner -->
           <div id="pinned-banner" class="pinned-banner hidden">
             <span class="pin-icon">📌</span>
             <div class="pin-text" id="pinned-banner-text"></div>
           </div>
 
-          <!-- Message Stream -->
           <div class="chat-messages" id="chat-messages-container"></div>
 
-          <!-- Reply Preview Bar (Zulip / Mattermost Threading) -->
           <div id="reply-preview-bar" class="reply-preview-bar hidden">
             <div class="reply-info">
               <strong>Membalas <span id="reply-target-name"></span>:</strong>
@@ -302,7 +298,6 @@
             <button type="button" id="btn-cancel-reply" class="btn-icon">✕</button>
           </div>
 
-          <!-- Composer Input Form -->
           <form class="chat-input-area" id="chat-form">
             <input
               type="text"
@@ -346,7 +341,6 @@
           </header>
 
           <div class="feed-scroll-area">
-            <!-- Create Post Composer Card -->
             <form id="feed-post-form" class="feed-composer-card">
               <div class="composer-top">
                 <input type="text" id="post-title" placeholder="Judul pengumuman, usulan, atau informasi warga..." required>
@@ -359,7 +353,6 @@
               </div>
               <textarea id="post-content" rows="3" placeholder="Bagikan informasi, agenda kerja bakti, laporan keamanan, atau buka musyawarah..." required></textarea>
 
-              <!-- Optional Poll Builder -->
               <div id="poll-builder" class="poll-builder hidden">
                 <input type="text" id="poll-question" placeholder="Pertanyaan Polling / Musyawarah (contoh: Setuju kerja bakti Minggu pagi?)">
                 <input type="text" id="poll-options" placeholder="Opsi dipisahkan koma (contoh: Setuju Jam 07.00, Setuju Jam 08.00, Usul Hari Sabtu)">
@@ -373,12 +366,129 @@
               </div>
             </form>
 
-            <!-- Feed Stream Container -->
             <div id="feed-posts-container" class="feed-posts-list"></div>
           </div>
         </section>
 
-        <!-- STAGE C: CITIZEN DIRECTORY -->
+        <!-- STAGE C: TRANSPARENT KAS & CITIZEN DUES (FOCUS #1) -->
+        <section id="stage-finance" class="stage-panel hidden">
+          <header class="stage-top-header">
+            <div>
+              <h2>Buku Kas Terbuka &amp; Iuran Bulanan Warga RT 003</h2>
+              <p>Transparansi keuangan real-time (Native SQLite WAL): setiap warga dapat memantau mutasi kas &amp; status iuran.</p>
+            </div>
+            <div class="feed-filter-pills" id="finance-type-filters">
+              <button type="button" class="pill-btn active" data-tx="ALL">Semua Mutasi</button>
+              <button type="button" class="pill-btn" data-tx="IN">Pemasukan (+)</button>
+              <button type="button" class="pill-btn" data-tx="OUT">Pengeluaran (-)</button>
+            </div>
+          </header>
+
+          <div class="admin-scroll-area">
+            <!-- Financial KPI Cards -->
+            <div class="admin-stats-grid">
+              <div class="stat-card stat-card-active">
+                <div class="stat-number text-success" id="fin-balance">Rp 0</div>
+                <div class="stat-label">Saldo Kas RT Saat Ini</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="fin-total-in">Rp 0</div>
+                <div class="stat-label">Total Pemasukan Kas</div>
+              </div>
+              <div class="stat-card stat-card-fictional">
+                <div class="stat-number" id="fin-total-out">Rp 0</div>
+                <div class="stat-label">Total Pengeluaran Kas</div>
+              </div>
+              <div class="stat-card stat-card-pending">
+                <div class="stat-number" id="fin-dues-rate">0%</div>
+                <div class="stat-label">Kepatuhan Iuran Oktober 2026</div>
+              </div>
+            </div>
+
+            <!-- Record New Transaction Form (Admin & Bendahara) -->
+            <form id="finance-tx-form" class="admin-card" style="margin-bottom: 1.25rem;">
+              <h3 class="section-subtitle" style="margin-bottom: 0.75rem;">+ Catat Mutasi Kas Baru (Pengurus / Bendahara)</h3>
+              <div class="finance-form-grid">
+                <select id="tx-type" required>
+                  <option value="IN">Pemasukan (+)</option>
+                  <option value="OUT">Pengeluaran (-)</option>
+                </select>
+                <select id="tx-category" required>
+                  <option value="Iuran Wajib">Iuran Wajib Warga</option>
+                  <option value="Infrastruktur">Infrastruktur &amp; Penerangan</option>
+                  <option value="Kebersihan">Kebersihan &amp; Sampah</option>
+                  <option value="Sosial/PKK">Sosial, PKK &amp; Posyandu</option>
+                  <option value="Keamanan">Keamanan &amp; Siskamling</option>
+                </select>
+                <input type="number" id="tx-amount" placeholder="Nominal (Rp) cth: 150000" min="1000" required>
+                <input type="text" id="tx-desc" placeholder="Keterangan mutasi kas secara jelas..." required>
+                <button type="submit" class="btn btn-primary btn-sm">Simpan ke Buku Kas</button>
+              </div>
+            </form>
+
+            <!-- Two-Column Finance Tables: Ledger & Monthly Citizen Dues -->
+            <div class="finance-split-grid">
+              <div class="admin-card">
+                <h3 class="section-subtitle" style="margin-bottom: 0.75rem;">Riwayat Mutasi Buku Kas RT</h3>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Tanggal</th>
+                        <th>Kategori</th>
+                        <th>Uraian Transaksi</th>
+                        <th>Nominal</th>
+                      </tr>
+                    </thead>
+                    <tbody id="finance-ledger-body"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="admin-card">
+                <h3 class="section-subtitle" style="margin-bottom: 0.75rem;">Status Iuran Warga (Oktober 2026 • Rp 50.000)</h3>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Warga</th>
+                        <th>Status</th>
+                        <th>Tgl Bayar</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="finance-dues-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Roadmap Scope Banner (4 Pillars) -->
+            <div class="admin-card" style="margin-top: 1.25rem;">
+              <h3 class="section-subtitle" style="margin-bottom: 0.65rem;">🗺️ Peta Jalan Scope Pembelajaran Publik (4 Pilar Komunitas RT-Ku)</h3>
+              <div class="roadmap-grid">
+                <div class="roadmap-item active-pillar">
+                  <strong>1. Kas &amp; Iuran Transparan (v0.3 — Aktif)</strong>
+                  <span>Buku kas real-time SQLite WAL, rekap pemasukan/pengeluaran, dan status lunas warga.</span>
+                </div>
+                <div class="roadmap-item">
+                  <strong>2. E-Surat Pengantar RT/RW (Target v0.4)</strong>
+                  <span>Pengajuan surat pengantar domisili/KTP/SKCK mandiri dengan tanda tangan persetujuan Ketua RT.</span>
+                </div>
+                <div class="roadmap-item">
+                  <strong>3. Siskamling &amp; Panic Button (Target v0.5)</strong>
+                  <span>Jadwal giliran ronda malam dan tombol darurat real-time (SSE broadcast alarm ke seluruh warga).</span>
+                </div>
+                <div class="roadmap-item">
+                  <strong>4. Asisten AI Pengurus RT (Target v0.6)</strong>
+                  <span>Tanya-jawab otomatis peraturan RT &amp; ringkasan rapat menggunakan kunci API aman di <code>.env</code>.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- STAGE D: CITIZEN DIRECTORY -->
         <section id="stage-directory" class="stage-panel hidden">
           <header class="stage-top-header">
             <div>
@@ -390,7 +500,7 @@
           <div class="directory-grid" id="directory-cards-container"></div>
         </section>
 
-        <!-- STAGE D: ADMIN GOVERNANCE & CLEAR DATA CONSOLE -->
+        <!-- STAGE E: ADMIN GOVERNANCE & CLEAR DATA CONSOLE -->
         <section id="stage-admin" class="stage-panel hidden">
           <header class="stage-top-header">
             <div>
@@ -460,7 +570,6 @@
               </div>
             </div>
 
-            <!-- Security & Governance Audit Log -->
             <div class="admin-card" style="margin-top: 1.25rem;">
               <h3 class="section-subtitle">Log Audit Aktivitas &amp; Moderasi Pengurus</h3>
               <div id="admin-audit-list" class="audit-list"></div>
@@ -488,8 +597,8 @@
           <h3 class="drawer-title">📊 Ringkasan Lingkungan RT 003</h3>
           <div class="rt-info-cards">
             <div class="mini-info-card">
-              <span class="mini-label">Saldo Kas RT Bulan Ini</span>
-              <strong class="mini-value text-success">Rp 8.450.000</strong>
+              <span class="mini-label">Saldo Kas RT Terbuka</span>
+              <strong class="mini-value text-success" id="drawer-kas-balance">Rp 8.450.000</strong>
             </div>
             <div class="mini-info-card">
               <span class="mini-label">Jadwal Kerja Bakti</span>

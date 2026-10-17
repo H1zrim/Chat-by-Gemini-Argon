@@ -1,21 +1,17 @@
 /**
- * RT-Ku v0.2 — Hybrid Real-Time Client Engine
- * Inspired by Mattermost, Zulip, Rocket.Chat & Meta Workplace.
- *
- * Dual-Mode Architecture:
- * 1. Full-Stack Mode: Connects to Node.js backend via REST + Server-Sent Events (SSE)
- * 2. Standalone Mode: Falls back to LocalStorage + BroadcastChannel when opened statically
+ * RT-Ku v0.3 — Hybrid Real-Time Client Engine
+ * Powered by Native SQLite + Server-Sent Events (SSE) with LocalStorage Fallback.
+ * Includes Focus #1: Transparent Kas Ledger & Monthly Citizen Dues Tracker.
  */
 
 const STORAGE_KEYS = {
-  STORE: 'rtku_v02_store',
-  SESSION: 'rtku_v02_session',
-  THEME: 'rtku_v02_theme'
+  STORE: 'rtku_v03_store',
+  SESSION: 'rtku_v03_session',
+  THEME: 'rtku_v03_theme'
 };
 
 const REACTION_EMOJIS = ['👍', '❤️', '🙏', '🔥', '✅'];
 
-// Default Seed Data (used when running standalone without Node server)
 function getDefaultSeedStore() {
   return {
     channels: [
@@ -157,19 +153,6 @@ function getDefaultSeedStore() {
         pinned: true,
         replyTo: null,
         reactions: { '✅': ['3201010202920002', '3201010303950003', '3201010606930006'] }
-      },
-      {
-        id: 'msg_init_4',
-        channel: 'ch-pengumuman',
-        topic: 'Administrasi Warga',
-        senderNik: '3201010101900001',
-        senderName: 'Bambang Pamungkas',
-        senderRole: 'admin',
-        text: '[PENGUMUMAN RESMI] Pemutakhiran data kependudukan RT 003 sedang berlangsung. Pastikan NIK keluarga sudah terverifikasi Aktif oleh pengurus.',
-        time: '08:15',
-        pinned: true,
-        replyTo: null,
-        reactions: { '🙏': ['3201010202920002'] }
       }
     ],
     posts: [
@@ -181,7 +164,7 @@ function getDefaultSeedStore() {
         authorRole: 'admin',
         category: 'Pengumuman Resmi',
         title: 'Transparansi Kas RT & Rencana Perbaikan Lampu Jalan Lingkungan',
-        content: 'Halo warga RT 003/005! Saldo Kas RT bulan ini tercatat Rp 8.450.000. Minggu depan kita akan melakukan penggantian 6 titik lampu jalan LED hemat energi di sepanjang gang Blok B dan C. Silakan berikan masukan atau suara pada polling di bawah ini.',
+        content: 'Halo warga RT 003/005! Buku Kas RT kini dapat dipantau secara real-time di menu Kas RT. Minggu depan kita akan melakukan penggantian 6 titik lampu jalan LED hemat energi di sepanjang gang Blok B dan C.',
         createdAt: 'Hari ini, 08:10',
         pinned: true,
         likes: ['3201010202920002', '3201010303950003', '3201010606930006'],
@@ -198,47 +181,74 @@ function getDefaultSeedStore() {
             id: 'cmt_1',
             authorNik: '3201010606930006',
             authorName: 'Rina Kartika',
-            text: 'Laporan rincian nota pembelian lampu LED sudah saya lampirkan di buku kas terbuka RT ya bapak/ibu.',
+            text: 'Seluruh mutasi pemasukan dan pengeluaran sudah tercatat otomatis di menu Kas RT.',
             time: '08:22'
           }
         ]
+      }
+    ],
+    kasTransactions: [
+      {
+        id: 'tx_1',
+        date: '2026-10-01',
+        type: 'IN',
+        category: 'Saldo Awal',
+        description: 'Saldo Kas RT 003 Bulan Sebelumnya',
+        amount: 8200000,
+        actorName: 'Rina Kartika'
       },
       {
-        id: 'post_2',
-        authorNik: '3201010202920002',
-        authorName: 'Siti Nurhaliza',
-        authorTitle: 'Koordinator PKK & Posyandu',
-        authorRole: 'citizen',
-        category: 'Kegiatan Warga',
-        title: 'Jadwal Posyandu Balita & Pemeriksaan Kesehatan Lansia Gratis',
-        content: 'Mengundang seluruh warga RT 003 yang memiliki balita serta orang tua/lansia untuk hadir pada kegiatan Posyandu rutin hari Sabtu pukul 08.30 WIB di Balai Warga. Tersedia pengecekan tensi, gula darah, dan pemberian vitamin.',
-        createdAt: 'Kemarin, 19:40',
-        pinned: false,
-        likes: ['3201010101900001'],
-        poll: null,
-        comments: []
+        id: 'tx_2',
+        date: '2026-10-05',
+        type: 'IN',
+        category: 'Iuran Wajib',
+        description: 'Kolektif Iuran Kebersihan & Keamanan Warga Tahap 1',
+        amount: 950000,
+        actorName: 'Rina Kartika'
+      },
+      {
+        id: 'tx_3',
+        date: '2026-10-10',
+        type: 'OUT',
+        category: 'Infrastruktur',
+        description: 'Pembelian 6 Lampu Jalan LED 30W & Kabel Gang Blok B-C',
+        amount: 520000,
+        actorName: 'Bambang Pamungkas'
+      },
+      {
+        id: 'tx_4',
+        date: '2026-10-14',
+        type: 'OUT',
+        category: 'Sosial/PKK',
+        description: 'Konsumsi Kerja Bakti & Vitamin Posyandu Lansia',
+        amount: 180000,
+        actorName: 'Siti Nurhaliza'
       }
+    ],
+    citizenDues: [
+      { nik: '3201010101900001', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-02' },
+      { nik: '3201010202920002', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-03' },
+      { nik: '3201010303950003', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-04' },
+      { nik: '3201010606930006', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-02' },
+      { nik: '3201010404980004', month: 'Oktober 2026', amount: 50000, status: 'UNPAID', updatedAt: '-' }
     ],
     auditLogs: [
       {
         id: 'log_1',
         time: '08:00',
         actor: 'Bambang Pamungkas',
-        action: 'Menandai akun 9999999999999999 sebagai Data Fiktif (Fictional)'
+        action: 'Inisialisasi database SQLite WAL & buku kas transparan RT 003'
       }
     ],
     onlineNiks: ['3201010101900001', '3201010202920002', '3201010303950003']
   };
 }
 
-// ============================================================================
-// APPLICATION STATE
-// ============================================================================
 const state = {
   serverOnline: false,
   store: getDefaultSeedStore(),
   currentUser: null,
-  activeStage: 'chat', // 'chat' | 'feed' | 'directory' | 'admin'
+  activeStage: 'chat', // 'chat' | 'feed' | 'finance' | 'directory' | 'admin'
   activeChat: {
     id: 'group-rt',
     name: 'Forum Warga RT 003',
@@ -246,11 +256,12 @@ const state = {
     badge: 'Utama',
     subtitle: 'Saluran Utama Diskusi & Koordinasi Warga RT 003 / RW 005'
   },
-  replyingTo: null, // { id, senderName, text }
-  feedCategory: 'ALL'
+  replyingTo: null,
+  feedCategory: 'ALL',
+  financeFilter: 'ALL'
 };
 
-const broadcastChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rtku_v02_bus') : null;
+const broadcastChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rtku_v03_bus') : null;
 let sseConnection = null;
 
 function sanitizeHTML(str) {
@@ -259,13 +270,21 @@ function sanitizeHTML(str) {
   return div.innerHTML;
 }
 
+function formatRupiah(num) {
+  return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+}
+
 function getCurrentTime() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+function getTodayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // ============================================================================
-// HYBRID DATA LAYER (SERVER REST/SSE + LOCAL FALLBACK)
+// HYBRID DATA LAYER (SQLITE SERVER + LOCAL FALLBACK)
 // ============================================================================
 function saveLocalStore() {
   localStorage.setItem(STORAGE_KEYS.STORE, JSON.stringify(state.store));
@@ -279,7 +298,7 @@ function loadLocalStore(forceReset = false) {
     const raw = localStorage.getItem(STORAGE_KEYS.STORE);
     if (raw) {
       try {
-        state.store = JSON.parse(raw);
+        state.store = { ...getDefaultSeedStore(), ...JSON.parse(raw) };
         return;
       } catch {
         // Fallback to seed
@@ -337,12 +356,24 @@ function connectSSE() {
     renderFeedPosts();
   });
 
+  sseConnection.addEventListener('finance:update', (e) => {
+    const { kasTransactions, citizenDues, auditLogs } = JSON.parse(e.data);
+    if (kasTransactions) state.store.kasTransactions = kasTransactions;
+    if (citizenDues) state.store.citizenDues = citizenDues;
+    if (auditLogs) state.store.auditLogs = auditLogs;
+    renderFinanceView();
+    renderContextDrawer();
+    renderAdminView();
+  });
+
   sseConnection.addEventListener('users:update', (e) => {
-    const { users, auditLogs } = JSON.parse(e.data);
+    const { users, auditLogs, citizenDues } = JSON.parse(e.data);
     state.store.users = users;
     if (auditLogs) state.store.auditLogs = auditLogs;
+    if (citizenDues) state.store.citizenDues = citizenDues;
     renderSidebarLists();
     renderDirectory();
+    renderFinanceView();
     renderAdminView();
   });
 
@@ -363,7 +394,7 @@ function updateEngineBadge() {
   const badge = document.getElementById('engine-status-badge');
   if (!badge) return;
   if (state.serverOnline) {
-    badge.textContent = '⚡ Node SSE Real-Time';
+    badge.textContent = '⚡ SQLite-WAL + SSE Aktif';
     badge.style.color = 'var(--success)';
   } else {
     badge.textContent = '💾 Mode Lokal (BroadcastSync)';
@@ -381,7 +412,7 @@ if (broadcastChannel) {
 }
 
 // ============================================================================
-// THEME MANAGEMENT (LIGHT / DARK)
+// THEME MANAGEMENT
 // ============================================================================
 function initTheme() {
   const saved = localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
@@ -448,7 +479,7 @@ document.getElementById('quick-fill-citizen').addEventListener('click', () => {
 
 document.getElementById('quick-fill-security').addEventListener('click', () => {
   tabLoginBtn.click();
-  document.getElementById('login-nik').value = '3201010303950003';
+  document.getElementById('login-nik').value = '3201010606930006';
   document.getElementById('login-password').value = 'user123';
 });
 
@@ -476,7 +507,7 @@ loginForm.addEventListener('submit', async (e) => {
       enterWorkspace();
       return;
     } catch {
-      // Fallback to local auth
+      // Fallback local
     }
   }
 
@@ -532,7 +563,7 @@ registerForm.addEventListener('submit', async (e) => {
       document.getElementById('login-nik').value = nik;
       return;
     } catch {
-      // Fallback to local registration
+      // Fallback local
     }
   }
 
@@ -553,6 +584,13 @@ registerForm.addEventListener('submit', async (e) => {
   };
 
   state.store.users.push(newUser);
+  state.store.citizenDues.push({
+    nik,
+    month: 'Oktober 2026',
+    amount: 50000,
+    status: 'UNPAID',
+    updatedAt: '-'
+  });
   state.store.auditLogs.unshift({
     id: `log_${Date.now()}`,
     time: getCurrentTime(),
@@ -597,6 +635,7 @@ const railButtons = document.querySelectorAll('.rail-btn[data-nav]');
 const stages = {
   chat: document.getElementById('stage-chat'),
   feed: document.getElementById('stage-feed'),
+  finance: document.getElementById('stage-finance'),
   directory: document.getElementById('stage-directory'),
   admin: document.getElementById('stage-admin')
 };
@@ -620,7 +659,7 @@ function switchStage(stageName) {
   });
 
   Object.entries(stages).forEach(([key, el]) => {
-    el.classList.toggle('hidden', key !== stageName);
+    if (el) el.classList.toggle('hidden', key !== stageName);
   });
 
   if (stageName === 'chat') {
@@ -628,6 +667,8 @@ function switchStage(stageName) {
     renderContextDrawer();
   } else if (stageName === 'feed') {
     renderFeedPosts();
+  } else if (stageName === 'finance') {
+    renderFinanceView();
   } else if (stageName === 'directory') {
     renderDirectory();
   } else if (stageName === 'admin') {
@@ -638,7 +679,6 @@ function switchStage(stageName) {
 function refreshAllViews() {
   if (!state.currentUser) return;
 
-  // Profile header
   document.getElementById('sidebar-name').textContent = state.currentUser.name;
   document.getElementById('sidebar-nik').textContent = `NIK: ${state.currentUser.nik}`;
   document.getElementById('sidebar-avatar').textContent = state.currentUser.name.charAt(0).toUpperCase();
@@ -656,6 +696,7 @@ function refreshAllViews() {
   renderChatMessages();
   renderContextDrawer();
   renderFeedPosts();
+  renderFinanceView();
   renderDirectory();
   if (state.currentUser.role === 'admin') {
     renderAdminView();
@@ -672,7 +713,6 @@ function renderSidebarLists(query = '') {
   channelsList.innerHTML = '';
   contactsList.innerHTML = '';
 
-  // 1. Render Channels
   state.store.channels
     .filter((ch) => !q || ch.title.toLowerCase().includes(q) || ch.name.toLowerCase().includes(q))
     .forEach((ch) => {
@@ -703,7 +743,6 @@ function renderSidebarLists(query = '') {
       channelsList.appendChild(div);
     });
 
-  // 2. Render Active Citizens (Direct Messages)
   const activeCitizens = state.store.users.filter(
     (u) => u.status === 'Active' && u.nik !== state.currentUser.nik &&
       (!q || u.name.toLowerCase().includes(q) || u.nik.includes(q))
@@ -723,9 +762,7 @@ function renderSidebarLists(query = '') {
         <div class="contact-sub">${sanitizeHTML(citizen.title || `RT ${citizen.rtrw}`)}</div>
       </div>
     `;
-    div.addEventListener('click', () => {
-      openDirectMessage(citizen);
-    });
+    div.addEventListener('click', () => openDirectMessage(citizen));
     contactsList.appendChild(div);
   });
 }
@@ -750,7 +787,6 @@ document.getElementById('contact-search').addEventListener('input', (e) => {
   renderSidebarLists(e.target.value);
 });
 
-// Keyboard shortcut Ctrl+K to focus search
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
@@ -762,13 +798,12 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ============================================================================
-// REAL-TIME CHAT STREAM (THREADS, REACTIONS, PINS)
+// REAL-TIME CHAT STREAM
 // ============================================================================
 function renderChatHeader() {
   document.getElementById('chat-current-title').textContent = state.activeChat.name;
   document.getElementById('chat-current-badge').textContent = state.activeChat.badge || 'Saluran';
   document.getElementById('chat-current-subtitle').textContent = state.activeChat.subtitle;
-
   const avatar = document.getElementById('chat-current-avatar');
   avatar.textContent = state.activeChat.isGroup ? '#' : state.activeChat.name.charAt(0).toUpperCase();
 }
@@ -796,8 +831,6 @@ function renderChatMessages() {
   container.innerHTML = '';
 
   const messages = getActiveConversationMessages();
-
-  // Pinned Banner
   const pinnedMsgs = messages.filter((m) => m.pinned);
   const pinnedBanner = document.getElementById('pinned-banner');
   if (pinnedMsgs.length > 0) {
@@ -830,7 +863,6 @@ function renderChatMessages() {
       ? `<div class="reply-quote-box"><strong>↩ ${sanitizeHTML(msg.replyTo.senderName)}:</strong> ${sanitizeHTML(msg.replyTo.text)}</div>`
       : '';
 
-    // Reactions
     const reactionsObj = msg.reactions || {};
     const reactionButtons = REACTION_EMOJIS.map((emoji) => {
       const voters = reactionsObj[emoji] || [];
@@ -854,8 +886,8 @@ function renderChatMessages() {
           <div class="bubble-Utility-btns">
             <button type="button" class="bubble-action-btn" title="Beri Reaksi 👍" onclick="toggleReaction('${msg.id}', '👍')">👍</button>
             <button type="button" class="bubble-action-btn" title="Beri Reaksi ❤️" onclick="toggleReaction('${msg.id}', '❤️')">❤️</button>
-            <button type="button" class="bubble-action-btn" title="Balas Pesan (Thread)" onclick="setReplyTarget('${msg.id}')">↩ Balas</button>
-            <button type="button" class="bubble-action-btn" title="Sematkan Pesan (Pin)" onclick="togglePinMessage('${msg.id}')">📌</button>
+            <button type="button" class="bubble-action-btn" title="Balas Pesan" onclick="setReplyTarget('${msg.id}')">↩ Balas</button>
+            <button type="button" class="bubble-action-btn" title="Sematkan Pesan" onclick="togglePinMessage('${msg.id}')">📌</button>
           </div>
         </div>
       </div>
@@ -868,9 +900,7 @@ function renderChatMessages() {
   container.scrollTop = container.scrollHeight;
 }
 
-document.getElementById('chat-message-filter').addEventListener('input', () => {
-  renderChatMessages();
-});
+document.getElementById('chat-message-filter').addEventListener('input', renderChatMessages);
 
 window.setReplyTarget = function (msgId) {
   const msg = state.store.messages.find((m) => m.id === msgId);
@@ -938,7 +968,6 @@ window.togglePinMessage = async function (messageId) {
   renderContextDrawer();
 };
 
-// Send Chat Message
 document.getElementById('chat-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const textInput = document.getElementById('chat-input-text');
@@ -1036,10 +1065,25 @@ function simulateNeighborReply(sentMsg) {
 // ============================================================================
 // CONTEXTUAL RIGHT DRAWER
 // ============================================================================
+function calculateKasSummary() {
+  const txs = state.store.kasTransactions || [];
+  let totalIn = 0;
+  let totalOut = 0;
+  txs.forEach((tx) => {
+    if (tx.type === 'IN') totalIn += Number(tx.amount || 0);
+    else totalOut += Number(tx.amount || 0);
+  });
+  return { totalIn, totalOut, balance: totalIn - totalOut };
+}
+
 function renderContextDrawer() {
   document.getElementById('drawer-channel-desc').textContent = state.activeChat.subtitle;
   const pinnedContainer = document.getElementById('drawer-pinned-list');
   pinnedContainer.innerHTML = '';
+
+  const { balance } = calculateKasSummary();
+  const drawerBalanceEl = document.getElementById('drawer-kas-balance');
+  if (drawerBalanceEl) drawerBalanceEl.textContent = formatRupiah(balance);
 
   const pinned = getActiveConversationMessages().filter((m) => m.pinned);
   if (pinned.length === 0) {
@@ -1290,7 +1334,188 @@ window.submitPostComment = async function (e, postId) {
 };
 
 // ============================================================================
-// STAGE C: CITIZEN DIRECTORY
+// STAGE C: TRANSPARENT KAS & MONTHLY CITIZEN DUES (FOCUS #1)
+// ============================================================================
+document.querySelectorAll('#finance-type-filters .pill-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#finance-type-filters .pill-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.financeFilter = btn.getAttribute('data-tx');
+    renderFinanceView();
+  });
+});
+
+function canManageFinance() {
+  if (!state.currentUser) return false;
+  return state.currentUser.role === 'admin' || (state.currentUser.title || '').toLowerCase().includes('bendahara');
+}
+
+function renderFinanceView() {
+  if (!state.currentUser) return;
+
+  const { totalIn, totalOut, balance } = calculateKasSummary();
+  document.getElementById('fin-balance').textContent = formatRupiah(balance);
+  document.getElementById('fin-total-in').textContent = formatRupiah(totalIn);
+  document.getElementById('fin-total-out').textContent = formatRupiah(totalOut);
+
+  const activeUsers = state.store.users.filter((u) => u.status === 'Active');
+  const duesMap = new Map((state.store.citizenDues || []).map((d) => [d.nik, d]));
+  const paidCount = activeUsers.filter((u) => {
+    const d = duesMap.get(u.nik);
+    return d && d.status === 'PAID';
+  }).length;
+  const duesRate = activeUsers.length > 0 ? Math.round((paidCount / activeUsers.length) * 100) : 0;
+  document.getElementById('fin-dues-rate').textContent = `${duesRate}% (${paidCount}/${activeUsers.length})`;
+
+  // Show/hide transaction form for Admin / Bendahara
+  const txForm = document.getElementById('finance-tx-form');
+  if (txForm) {
+    txForm.classList.toggle('hidden', !canManageFinance());
+  }
+
+  // Render Ledger Table
+  const ledgerBody = document.getElementById('finance-ledger-body');
+  ledgerBody.innerHTML = '';
+  const filteredTxs = (state.store.kasTransactions || []).filter(
+    (tx) => state.financeFilter === 'ALL' || tx.type === state.financeFilter
+  );
+
+  filteredTxs.forEach((tx) => {
+    const tr = document.createElement('tr');
+    const isIn = tx.type === 'IN';
+    tr.innerHTML = `
+      <td>${sanitizeHTML(tx.date)}</td>
+      <td><span class="badge ${isIn ? 'badge-active' : 'badge-pending'}">${sanitizeHTML(tx.category)}</span></td>
+      <td>
+        <div style="font-weight:600;">${sanitizeHTML(tx.description)}</div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);">Dicatat oleh: ${sanitizeHTML(tx.actorName)}</div>
+      </td>
+      <td style="font-weight:800;color:${isIn ? 'var(--success)' : 'var(--danger)'};">
+        ${isIn ? '+' : '-'} ${formatRupiah(tx.amount)}
+      </td>
+    `;
+    ledgerBody.appendChild(tr);
+  });
+
+  // Render Citizen Monthly Dues Table
+  const duesBody = document.getElementById('finance-dues-body');
+  duesBody.innerHTML = '';
+  const isManager = canManageFinance();
+
+  activeUsers.forEach((u) => {
+    const due = duesMap.get(u.nik) || { status: 'UNPAID', updatedAt: '-' };
+    const isPaid = due.status === 'PAID';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <div style="font-weight:700;">${sanitizeHTML(u.name)}</div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);">RT ${sanitizeHTML(u.rtrw)}</div>
+      </td>
+      <td>
+        <span class="badge ${isPaid ? 'badge-active' : 'badge-fictional'}">
+          ${isPaid ? '✅ Lunas' : '⏳ Belum Bayar'}
+        </span>
+      </td>
+      <td style="font-size:0.76rem;color:var(--text-secondary);">${sanitizeHTML(due.updatedAt)}</td>
+      <td>
+        ${isManager
+          ? `<button type="button" class="btn-action ${isPaid ? '' : 'btn-action-activate'}" onclick="toggleCitizenDue('${u.nik}')">
+              ${isPaid ? 'Batalkan' : 'Tandai Lunas'}
+            </button>`
+          : `<span style="font-size:0.72rem;color:var(--text-muted);">Transparan</span>`
+        }
+      </td>
+    `;
+    duesBody.appendChild(tr);
+  });
+}
+
+document.getElementById('finance-tx-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!canManageFinance()) return;
+
+  const type = document.getElementById('tx-type').value;
+  const category = document.getElementById('tx-category').value;
+  const amount = Math.abs(Number(document.getElementById('tx-amount').value) || 0);
+  const description = document.getElementById('tx-desc').value.trim();
+  if (!description || amount <= 0) return;
+
+  e.target.reset();
+
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/finance/transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          category,
+          amount,
+          description,
+          actorName: state.currentUser.name
+        })
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+
+  state.store.kasTransactions.unshift({
+    id: `tx_${Date.now()}`,
+    date: getTodayDate(),
+    type,
+    category,
+    description,
+    amount,
+    actorName: state.currentUser.name
+  });
+  state.store.auditLogs.unshift({
+    id: `log_${Date.now()}`,
+    time: getCurrentTime(),
+    actor: state.currentUser.name,
+    action: `Mencatat mutasi Kas [${type}] ${formatRupiah(amount)} — ${description}`
+  });
+  saveLocalStore();
+  renderFinanceView();
+  renderContextDrawer();
+});
+
+window.toggleCitizenDue = async function (nik) {
+  if (!canManageFinance()) return;
+
+  if (state.serverOnline) {
+    try {
+      await fetch('/api/finance/dues-toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nik, actorName: state.currentUser.name })
+      });
+      return;
+    } catch {
+      // Fallback local
+    }
+  }
+
+  const existing = state.store.citizenDues.find((d) => d.nik === nik);
+  if (existing) {
+    existing.status = existing.status === 'PAID' ? 'UNPAID' : 'PAID';
+    existing.updatedAt = existing.status === 'PAID' ? getTodayDate() : '-';
+  } else {
+    state.store.citizenDues.push({
+      nik,
+      month: 'Oktober 2026',
+      amount: 50000,
+      status: 'PAID',
+      updatedAt: getTodayDate()
+    });
+  }
+  saveLocalStore();
+  renderFinanceView();
+};
+
+// ============================================================================
+// STAGE D: CITIZEN DIRECTORY
 // ============================================================================
 function renderDirectory() {
   const container = document.getElementById('directory-cards-container');
@@ -1334,7 +1559,7 @@ window.startDmFromDirectory = function (nik) {
 document.getElementById('directory-search').addEventListener('input', renderDirectory);
 
 // ============================================================================
-// STAGE D: ADMIN GOVERNANCE & CLEAR DATA CONSOLE
+// STAGE E: ADMIN GOVERNANCE & CLEAR DATA CONSOLE
 // ============================================================================
 function renderAdminView() {
   if (!state.currentUser || state.currentUser.role !== 'admin') return;
@@ -1390,7 +1615,6 @@ function renderAdminView() {
     tbody.appendChild(tr);
   });
 
-  // Render Audit Logs
   const auditContainer = document.getElementById('admin-audit-list');
   auditContainer.innerHTML = '';
   (state.store.auditLogs || []).slice(0, 8).forEach((log) => {
@@ -1471,7 +1695,6 @@ document.getElementById('btn-admin-reset-data').addEventListener('click', async 
   refreshAllViews();
 });
 
-// Mobile toggles
 document.getElementById('mobile-toggle-sidebar').addEventListener('click', () => {
   document.getElementById('app-sidebar').classList.toggle('open');
 });
@@ -1480,7 +1703,6 @@ document.getElementById('mobile-toggle-info').addEventListener('click', () => {
   document.getElementById('context-drawer').classList.toggle('hidden');
 });
 
-// Bootstrap
 window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   await initDataLayer();

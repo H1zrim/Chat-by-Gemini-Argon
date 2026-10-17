@@ -1,21 +1,15 @@
 /**
- * RT-Ku v0.2 — High-Efficiency Real-Time Community & Chat Server
- * Architecture inspired by Mattermost, Zulip, Rocket.Chat, and Meta Workplace.
- *
- * Features:
- * - Zero external dependencies (Pure Node.js native modules: http, crypto, fs, path)
- * - Real-time Server-Sent Events (SSE) EventBus for <1ms push updates
- * - Cryptographic password hashing (scrypt) + HMAC-SHA256 session tokens
- * - Atomic persistent JSON-WAL storage in ignored `data/private/` directory
+ * RT-Ku v0.3 — High-Efficiency Real-Time Community, Chat & Transparent Finance Server
+ * Powered by Pure Zero-Dependency Node.js + Native `node:sqlite` (WAL Mode) + SSE
  */
 
 const http = require('node:http');
 const fs = require('node:fs');
-const fsp = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { DatabaseSync } = require('node:sqlite');
 
-// 1. Native .env loader (Confidentiality safe)
+// 1. Native .env Loader (Confidentiality-First)
 function loadEnvFile() {
   const envPath = path.join(__dirname, '.env');
   if (!fs.existsSync(envPath)) return;
@@ -36,7 +30,9 @@ const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const DATA_DIR = path.join(__dirname, 'data', 'private');
-const STORE_FILE = path.join(DATA_DIR, 'rtku-store.json');
+const SQLITE_PATH = path.join(DATA_DIR, 'rtku.sqlite');
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // 2. Cryptographic Helpers
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -59,20 +55,46 @@ function signToken(payload) {
   return `${data}.${sig}`;
 }
 
-function verifyToken(token) {
-  if (!token || typeof token !== 'string' || !token.includes('.')) return null;
-  const [data, sig] = token.split('.');
-  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
-  if (sig !== expected) return null;
-  try {
-    return JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
-  } catch {
-    return null;
-  }
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-// 3. Initial Seed Dataset
-function createSeedData() {
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// 3. Native SQLite Database Initialization (WAL Mode)
+const sqlite = new DatabaseSync(SQLITE_PATH);
+sqlite.exec(`
+  PRAGMA journal_mode = WAL;
+  PRAGMA synchronous = NORMAL;
+
+  CREATE TABLE IF NOT EXISTS kv_store (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS kas_transactions (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    actorName TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS citizen_dues (
+    nik TEXT PRIMARY KEY,
+    month TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+`);
+
+function createSeedState() {
   return {
     channels: [
       {
@@ -117,8 +139,7 @@ function createSeedData() {
         role: 'admin',
         title: 'Ketua RT 003',
         status: 'Active',
-        bio: 'Pengurus RT 003 / RW 005 • Melayani administrasi & ketertiban warga.',
-        joinedAt: '2025-01-10'
+        bio: 'Pengurus RT 003 / RW 005 • Melayani administrasi & ketertiban warga.'
       },
       {
         nik: '3201010202920002',
@@ -128,8 +149,7 @@ function createSeedData() {
         role: 'citizen',
         title: 'Koordinator PKK & Posyandu',
         status: 'Active',
-        bio: 'Penggerak PKK RT 003 & Posyandu Balita/Lansia.',
-        joinedAt: '2025-01-12'
+        bio: 'Penggerak PKK RT 003 & Posyandu Balita/Lansia.'
       },
       {
         nik: '3201010303950003',
@@ -139,8 +159,7 @@ function createSeedData() {
         role: 'citizen',
         title: 'Koordinator Keamanan',
         status: 'Active',
-        bio: 'Koordinator Siskamling & Ketertiban Blok A-C.',
-        joinedAt: '2025-01-15'
+        bio: 'Koordinator Siskamling & Ketertiban Blok A-C.'
       },
       {
         nik: '3201010606930006',
@@ -150,8 +169,7 @@ function createSeedData() {
         role: 'citizen',
         title: 'Bendahara Kas Warga',
         status: 'Active',
-        bio: 'Pengelola Kas RT & Transparansi Iuran Kebersihan.',
-        joinedAt: '2025-02-01'
+        bio: 'Pengelola Kas RT & Transparansi Iuran Kebersihan.'
       },
       {
         nik: '3201010404980004',
@@ -161,8 +179,7 @@ function createSeedData() {
         role: 'citizen',
         title: 'Warga Baru Blok D',
         status: 'Pending',
-        bio: 'Warga pindahan baru Blok D No. 14.',
-        joinedAt: '2026-09-01'
+        bio: 'Warga pindahan baru Blok D No. 14.'
       },
       {
         nik: '9999999999999999',
@@ -172,8 +189,7 @@ function createSeedData() {
         role: 'citizen',
         title: 'Tidak Terverifikasi',
         status: 'Fictional',
-        bio: 'Data terindikasi fiktif / duplikat.',
-        joinedAt: '2026-09-02'
+        bio: 'Data terindikasi fiktif / duplikat.'
       }
     ],
     messages: [
@@ -219,32 +235,6 @@ function createSeedData() {
         pinned: true,
         replyTo: null,
         reactions: { '✅': ['3201010202920002', '3201010303950003', '3201010606930006'] }
-      },
-      {
-        id: 'msg_init_4',
-        channel: 'ch-pengumuman',
-        topic: 'Jadwal Posyandu & Administrasi',
-        senderNik: '3201010101900001',
-        senderName: 'Bambang Pamungkas',
-        senderRole: 'admin',
-        text: '[PENGUMUMAN RESMI] Pemutakhiran data kependudukan RT 003 sedang berlangsung. Pastikan NIK keluarga sudah terverifikasi Aktif oleh pengurus.',
-        time: '08:15',
-        pinned: true,
-        replyTo: null,
-        reactions: { '🙏': ['3201010202920002'] }
-      },
-      {
-        id: 'msg_init_5',
-        channel: 'ch-keamanan',
-        topic: 'Patroli Malam',
-        senderNik: '3201010303950003',
-        senderName: 'Budi Santoso',
-        senderRole: 'citizen',
-        text: 'Laporan piket ronda semalam aman terkendali. Portal utama ditutup pukul 23.30 WIB.',
-        time: '06:15',
-        pinned: false,
-        replyTo: null,
-        reactions: { '👍': ['3201010101900001'] }
       }
     ],
     posts: [
@@ -256,7 +246,7 @@ function createSeedData() {
         authorRole: 'admin',
         category: 'Pengumuman Resmi',
         title: 'Transparansi Kas RT & Rencana Perbaikan Lampu Jalan Lingkungan',
-        content: 'Halo warga RT 003/005! Saldo Kas RT bulan ini tercatat Rp 8.450.000. Minggu depan kita akan melakukan penggantian 6 titik lampu jalan LED hemat energi di sepanjang gang Blok B dan C. Silakan berikan masukan atau suara pada polling di bawah ini.',
+        content: 'Halo warga RT 003/005! Buku Kas RT kini dapat dipantau secara real-time di menu Kas & Iuran. Minggu depan kita akan melakukan penggantian 6 titik lampu jalan LED hemat energi di sepanjang gang Blok B dan C.',
         createdAt: 'Hari ini, 08:10',
         pinned: true,
         likes: ['3201010202920002', '3201010303950003', '3201010606930006'],
@@ -273,25 +263,10 @@ function createSeedData() {
             id: 'cmt_1',
             authorNik: '3201010606930006',
             authorName: 'Rina Kartika',
-            text: 'Laporan rincian nota pembelian lampu LED sudah saya lampirkan di buku kas terbuka RT ya bapak/ibu.',
+            text: 'Seluruh mutasi pemasukan dan pengeluaran sudah tercatat otomatis di tab Kas & Iuran Warga.',
             time: '08:22'
           }
         ]
-      },
-      {
-        id: 'post_2',
-        authorNik: '3201010202920002',
-        authorName: 'Siti Nurhaliza',
-        authorTitle: 'Koordinator PKK & Posyandu',
-        authorRole: 'citizen',
-        category: 'Kegiatan Warga',
-        title: 'Jadwal Posyandu Balita & Pemeriksaan Kesehatan Lansia Gratis',
-        content: 'Mengundang seluruh warga RT 003 yang memiliki balita serta orang tua/lansia untuk hadir pada kegiatan Posyandu rutin hari Sabtu pukul 08.30 WIB di Balai Warga. Tersedia pengecekan tensi, gula darah, dan pemberian vitamin.',
-        createdAt: 'Kemarin, 19:40',
-        pinned: false,
-        likes: ['3201010101900001'],
-        poll: null,
-        comments: []
       }
     ],
     auditLogs: [
@@ -299,34 +274,121 @@ function createSeedData() {
         id: 'log_1',
         time: '08:00',
         actor: 'Bambang Pamungkas',
-        action: 'Menandai akun 9999999999999999 sebagai Data Fiktif (Fictional)'
+        action: 'Inisialisasi database SQLite WAL & buku kas transparan RT 003'
       }
     ]
   };
 }
 
+const INITIAL_KAS = [
+  {
+    id: 'tx_1',
+    date: '2026-10-01',
+    type: 'IN',
+    category: 'Saldo Awal',
+    description: 'Saldo Kas RT 003 Bulan Sebelumnya',
+    amount: 8200000,
+    actorName: 'Rina Kartika'
+  },
+  {
+    id: 'tx_2',
+    date: '2026-10-05',
+    type: 'IN',
+    category: 'Iuran Wajib',
+    description: 'Kolektif Iuran Kebersihan & Keamanan Warga Tahap 1',
+    amount: 950000,
+    actorName: 'Rina Kartika'
+  },
+  {
+    id: 'tx_3',
+    date: '2026-10-10',
+    type: 'OUT',
+    category: 'Infrastruktur',
+    description: 'Pembelian 6 Lampu Jalan LED 30W & Kabel Gang Blok B-C',
+    amount: 520000,
+    actorName: 'Bambang Pamungkas'
+  },
+  {
+    id: 'tx_4',
+    date: '2026-10-14',
+    type: 'OUT',
+    category: 'Sosial/PKK',
+    description: 'Konsumsi Kerja Bakti & Vitamin Posyandu Lansia',
+    amount: 180000,
+    actorName: 'Siti Nurhaliza'
+  }
+];
+
+const INITIAL_DUES = [
+  { nik: '3201010101900001', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-02' },
+  { nik: '3201010202920002', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-03' },
+  { nik: '3201010303950003', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-04' },
+  { nik: '3201010606930006', month: 'Oktober 2026', amount: 50000, status: 'PAID', updatedAt: '2026-10-02' },
+  { nik: '3201010404980004', month: 'Oktober 2026', amount: 50000, status: 'UNPAID', updatedAt: '-' }
+];
+
 let db = null;
 
-async function initDatabase() {
-  await fsp.mkdir(DATA_DIR, { recursive: true });
-  if (fs.existsSync(STORE_FILE)) {
-    try {
-      const raw = await fsp.readFile(STORE_FILE, 'utf8');
-      db = JSON.parse(raw);
-      return;
-    } catch {
-      // Fallback to seed if corrupted
-    }
-  }
-  db = createSeedData();
-  await persistDatabase();
+function saveKvState() {
+  const upsert = sqlite.prepare(`
+    INSERT INTO kv_store (key, value) VALUES ('app_state', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `);
+  upsert.run(JSON.stringify(db));
 }
 
-async function persistDatabase() {
-  const tempFile = `${STORE_FILE}.tmp`;
-  await fsp.writeFile(tempFile, JSON.stringify(db, null, 2), 'utf8');
-  await fsp.rename(tempFile, STORE_FILE);
+function getKasTransactions() {
+  return sqlite.prepare('SELECT * FROM kas_transactions ORDER BY date DESC, id DESC').all();
 }
+
+function getCitizenDues() {
+  return sqlite.prepare('SELECT * FROM citizen_dues').all();
+}
+
+function seedRelationalTables(forceReset = false) {
+  if (forceReset) {
+    sqlite.exec('DELETE FROM kas_transactions; DELETE FROM citizen_dues;');
+  }
+  const txCount = sqlite.prepare('SELECT COUNT(*) as c FROM kas_transactions').get().c;
+  if (txCount === 0) {
+    const insertTx = sqlite.prepare(`
+      INSERT INTO kas_transactions (id, date, type, category, description, amount, actorName)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const tx of INITIAL_KAS) {
+      insertTx.run(tx.id, tx.date, tx.type, tx.category, tx.description, tx.amount, tx.actorName);
+    }
+  }
+  const duesCount = sqlite.prepare('SELECT COUNT(*) as c FROM citizen_dues').get().c;
+  if (duesCount === 0) {
+    const insertDue = sqlite.prepare(`
+      INSERT INTO citizen_dues (nik, month, amount, status, updatedAt)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    for (const d of INITIAL_DUES) {
+      insertDue.run(d.nik, d.month, d.amount, d.status, d.updatedAt);
+    }
+  }
+}
+
+function initDatabase(forceReset = false) {
+  if (!forceReset) {
+    const row = sqlite.prepare("SELECT value FROM kv_store WHERE key = 'app_state'").get();
+    if (row && row.value) {
+      try {
+        db = JSON.parse(row.value);
+        seedRelationalTables(false);
+        return;
+      } catch {
+        // Fallback to seed
+      }
+    }
+  }
+  db = createSeedState();
+  saveKvState();
+  seedRelationalTables(true);
+}
+initDatabase(false);
 
 function sanitizeUser(u) {
   const { passwordHash, password, ...safe } = u;
@@ -334,7 +396,7 @@ function sanitizeUser(u) {
 }
 
 // 4. Real-Time SSE Clients Registry
-const sseClients = new Map(); // clientId -> { res, nik }
+const sseClients = new Map();
 
 function broadcastEvent(event, payload) {
   const frame = `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
@@ -342,7 +404,7 @@ function broadcastEvent(event, payload) {
     try {
       client.res.write(frame);
     } catch {
-      // Ignored; cleaned up on close
+      // Cleaned up on close
     }
   }
 }
@@ -355,7 +417,6 @@ function getOnlineNiks() {
   return Array.from(niks);
 }
 
-// 5. HTTP Request Helpers
 function sendJSON(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -387,26 +448,20 @@ function parseBody(req) {
   });
 }
 
-function nowTime() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-// 6. Request Router
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.svg': 'image/svg+xml'
 };
 
+// 5. HTTP & REST + SSE Server
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
-  // --- SSE STREAM ENDPOINT ---
+  // --- SSE STREAM ---
   if (req.method === 'GET' && pathname === '/api/events') {
     const clientId = crypto.randomUUID();
     const nik = url.searchParams.get('nik') || null;
@@ -422,23 +477,19 @@ const server = http.createServer(async (req, res) => {
     res.write(`event: connected\ndata: ${JSON.stringify({ clientId, onlineNiks: getOnlineNiks() })}\n\n`);
     broadcastEvent('presence:update', { onlineNiks: getOnlineNiks() });
 
-    const heartbeat = setInterval(() => {
-      try {
-        res.write(': heartbeat\n\n');
-      } catch {
-        clearInterval(heartbeat);
-      }
+    const hb = setInterval(() => {
+      try { res.write(': hb\n\n'); } catch { clearInterval(hb); }
     }, 20000);
 
     req.on('close', () => {
-      clearInterval(heartbeat);
+      clearInterval(hb);
       sseClients.delete(clientId);
       broadcastEvent('presence:update', { onlineNiks: getOnlineNiks() });
     });
     return;
   }
 
-  // --- BOOTSTRAP DATA ---
+  // --- BOOTSTRAP ---
   if (req.method === 'GET' && pathname === '/api/bootstrap') {
     return sendJSON(res, 200, {
       channels: db.channels,
@@ -446,6 +497,8 @@ const server = http.createServer(async (req, res) => {
       messages: db.messages,
       posts: db.posts,
       auditLogs: db.auditLogs,
+      kasTransactions: getKasTransactions(),
+      citizenDues: getCitizenDues(),
       onlineNiks: getOnlineNiks()
     });
   }
@@ -455,16 +508,12 @@ const server = http.createServer(async (req, res) => {
     try {
       const { nik, password } = await parseBody(req);
       const user = db.users.find((u) => u.nik === String(nik || '').trim());
-      if (!user) {
-        return sendJSON(res, 404, { error: 'NIK tidak terdaftar dalam sistem RT-Ku.' });
-      }
+      if (!user) return sendJSON(res, 404, { error: 'NIK tidak terdaftar dalam sistem RT-Ku.' });
       if (!verifyPassword(String(password || ''), user.passwordHash || user.password)) {
         return sendJSON(res, 401, { error: 'Kata sandi yang Anda masukkan salah.' });
       }
       if (user.status === 'Fictional') {
-        return sendJSON(res, 403, {
-          error: 'Akses ditolak: Data kependudukan Anda ditandai sebagai FIKTIF oleh Pengurus RT.'
-        });
+        return sendJSON(res, 403, { error: 'Akses ditolak: Data kependudukan Anda ditandai sebagai FIKTIF.' });
       }
       const safeUser = sanitizeUser(user);
       const token = signToken({ nik: user.nik, role: user.role, iat: Date.now() });
@@ -486,7 +535,7 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 400, { error: 'NIK harus terdiri dari tepat 16 digit angka.' });
       }
       if (!cleanName || !cleanRtrw || !password || String(password).length < 4) {
-        return sendJSON(res, 400, { error: 'Harap lengkapi semua kolom pendaftaran dengan benar.' });
+        return sendJSON(res, 400, { error: 'Harap lengkapi semua kolom pendaftaran.' });
       }
       if (db.users.some((u) => u.nik === cleanNik)) {
         return sendJSON(res, 409, { error: 'NIK ini sudah terdaftar sebelumnya.' });
@@ -500,8 +549,7 @@ const server = http.createServer(async (req, res) => {
         role: 'citizen',
         title: title ? String(title).trim() : 'Warga RT',
         status: 'Active',
-        bio: `Warga RT ${cleanRtrw}`,
-        joinedAt: new Date().toISOString().slice(0, 10)
+        bio: `Warga RT ${cleanRtrw}`
       };
 
       db.users.push(newUser);
@@ -511,23 +559,30 @@ const server = http.createServer(async (req, res) => {
         actor: cleanName,
         action: `Registrasi warga baru (NIK: ${cleanNik})`
       });
-      await persistDatabase();
+      saveKvState();
 
-      const safeUser = sanitizeUser(newUser);
-      broadcastEvent('users:update', { users: db.users.map(sanitizeUser), auditLogs: db.auditLogs });
-      return sendJSON(res, 201, { user: safeUser });
+      sqlite.prepare(`
+        INSERT OR IGNORE INTO citizen_dues (nik, month, amount, status, updatedAt)
+        VALUES (?, 'Oktober 2026', 50000, 'UNPAID', '-')
+      `).run(cleanNik);
+
+      broadcastEvent('users:update', {
+        users: db.users.map(sanitizeUser),
+        auditLogs: db.auditLogs,
+        citizenDues: getCitizenDues()
+      });
+      return sendJSON(res, 201, { user: sanitizeUser(newUser) });
     } catch {
       return sendJSON(res, 400, { error: 'Gagal memproses pendaftaran.' });
     }
   }
 
-  // --- SEND CHAT MESSAGE ---
+  // --- CHAT MESSAGES ---
   if (req.method === 'POST' && pathname === '/api/messages') {
     try {
       const { channel, topic, senderNik, senderName, senderRole, text, replyTo, recipientNik } = await parseBody(req);
-      if (!text || !senderNik) {
-        return sendJSON(res, 400, { error: 'Pesan tidak boleh kosong.' });
-      }
+      if (!text || !senderNik) return sendJSON(res, 400, { error: 'Pesan tidak boleh kosong.' });
+
       const msg = {
         id: `msg_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
         channel: channel || 'group-rt',
@@ -543,7 +598,7 @@ const server = http.createServer(async (req, res) => {
         reactions: {}
       };
       db.messages.push(msg);
-      await persistDatabase();
+      saveKvState();
       broadcastEvent('message:new', msg);
       return sendJSON(res, 201, { message: msg });
     } catch {
@@ -551,7 +606,6 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // --- REACT TO MESSAGE ---
   if (req.method === 'POST' && pathname === '/api/messages/react') {
     try {
       const { messageId, emoji, nik } = await parseBody(req);
@@ -561,13 +615,10 @@ const server = http.createServer(async (req, res) => {
       if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
 
       const idx = msg.reactions[emoji].indexOf(nik);
-      if (idx === -1) {
-        msg.reactions[emoji].push(nik);
-      } else {
-        msg.reactions[emoji].splice(idx, 1);
-        if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji];
-      }
-      await persistDatabase();
+      if (idx === -1) msg.reactions[emoji].push(nik);
+      else msg.reactions[emoji].splice(idx, 1);
+
+      saveKvState();
       broadcastEvent('message:update', msg);
       return sendJSON(res, 200, { message: msg });
     } catch {
@@ -575,14 +626,13 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // --- PIN / UNPIN MESSAGE ---
   if (req.method === 'POST' && pathname === '/api/messages/pin') {
     try {
       const { messageId } = await parseBody(req);
       const msg = db.messages.find((m) => m.id === messageId);
       if (!msg) return sendJSON(res, 404, { error: 'Pesan tidak ditemukan.' });
       msg.pinned = !msg.pinned;
-      await persistDatabase();
+      saveKvState();
       broadcastEvent('message:update', msg);
       return sendJSON(res, 200, { message: msg });
     } catch {
@@ -590,22 +640,16 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // --- COMMUNITY FEED: CREATE POST ---
+  // --- COMMUNITY FEED POSTS ---
   if (req.method === 'POST' && pathname === '/api/posts') {
     try {
       const { authorNik, authorName, authorTitle, authorRole, category, title, content, pollOptions, pollQuestion } = await parseBody(req);
-      if (!title || !content) {
-        return sendJSON(res, 400, { error: 'Judul dan isi kiriman wajib diisi.' });
-      }
+      if (!title || !content) return sendJSON(res, 400, { error: 'Judul dan isi wajib diisi.' });
       let poll = null;
       if (pollQuestion && Array.isArray(pollOptions) && pollOptions.length >= 2) {
         poll = {
           question: String(pollQuestion).trim(),
-          options: pollOptions.map((opt, idx) => ({
-            id: `opt_${Date.now()}_${idx}`,
-            text: String(opt).trim(),
-            votes: []
-          }))
+          options: pollOptions.map((opt, idx) => ({ id: `opt_${Date.now()}_${idx}`, text: String(opt).trim(), votes: [] }))
         };
       }
       const newPost = {
@@ -618,21 +662,20 @@ const server = http.createServer(async (req, res) => {
         title: String(title).trim(),
         content: String(content).trim(),
         createdAt: `Hari ini, ${nowTime()}`,
-        pinned: authorRole === 'admin' && category === 'Pengumuman Resmi',
+        pinned: authorRole === 'admin',
         likes: [],
         poll,
         comments: []
       };
       db.posts.unshift(newPost);
-      await persistDatabase();
+      saveKvState();
       broadcastEvent('posts:update', { posts: db.posts });
       return sendJSON(res, 201, { post: newPost });
     } catch {
-      return sendJSON(res, 400, { error: 'Gagal membuat kiriman komunitas.' });
+      return sendJSON(res, 400, { error: 'Gagal membuat kiriman.' });
     }
   }
 
-  // --- COMMUNITY FEED: LIKE / COMMENT / VOTE ---
   if (req.method === 'POST' && pathname === '/api/posts/interact') {
     try {
       const { postId, action, nik, authorName, text, optionId } = await parseBody(req);
@@ -657,8 +700,7 @@ const server = http.createServer(async (req, res) => {
           if (opt.id === optionId) opt.votes.push(nik);
         });
       }
-
-      await persistDatabase();
+      saveKvState();
       broadcastEvent('posts:update', { posts: db.posts });
       return sendJSON(res, 200, { post });
     } catch {
@@ -666,7 +708,78 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // --- ADMIN CRUD: UPDATE STATUS / DELETE / RESET ---
+  // --- FOCUS #1: TRANSPARENT KAS & CITIZEN DUES (SQLITE NATIVE) ---
+  if (req.method === 'POST' && pathname === '/api/finance/transaction') {
+    try {
+      const { type, category, description, amount, actorName } = await parseBody(req);
+      const cleanAmount = Math.abs(Number(amount) || 0);
+      if (!description || cleanAmount <= 0) {
+        return sendJSON(res, 400, { error: 'Keterangan dan nominal mutasi kas harus valid.' });
+      }
+      const id = `tx_${Date.now()}`;
+      const date = todayDate();
+      const txType = type === 'OUT' ? 'OUT' : 'IN';
+
+      sqlite.prepare(`
+        INSERT INTO kas_transactions (id, date, type, category, description, amount, actorName)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(id, date, txType, category || 'Umum', String(description).trim(), cleanAmount, actorName || 'Pengurus RT');
+
+      db.auditLogs.unshift({
+        id: `log_${Date.now()}`,
+        time: nowTime(),
+        actor: actorName || 'Pengurus RT',
+        action: `Mencatat mutasi Kas [${txType}] Rp ${cleanAmount.toLocaleString('id-ID')} — ${description}`
+      });
+      saveKvState();
+
+      const payload = {
+        kasTransactions: getKasTransactions(),
+        citizenDues: getCitizenDues(),
+        auditLogs: db.auditLogs
+      };
+      broadcastEvent('finance:update', payload);
+      return sendJSON(res, 201, payload);
+    } catch {
+      return sendJSON(res, 400, { error: 'Gagal menyimpan transaksi kas.' });
+    }
+  }
+
+  if (req.method === 'POST' && pathname === '/api/finance/dues-toggle') {
+    try {
+      const { nik, actorName } = await parseBody(req);
+      const existing = sqlite.prepare('SELECT * FROM citizen_dues WHERE nik = ?').get(nik);
+      const nextStatus = existing && existing.status === 'PAID' ? 'UNPAID' : 'PAID';
+      const updatedDate = nextStatus === 'PAID' ? todayDate() : '-';
+
+      sqlite.prepare(`
+        INSERT INTO citizen_dues (nik, month, amount, status, updatedAt)
+        VALUES (?, 'Oktober 2026', 50000, ?, ?)
+        ON CONFLICT(nik) DO UPDATE SET status = excluded.status, updatedAt = excluded.updatedAt
+      `).run(nik, nextStatus, updatedDate);
+
+      const citizen = db.users.find((u) => u.nik === nik);
+      db.auditLogs.unshift({
+        id: `log_${Date.now()}`,
+        time: nowTime(),
+        actor: actorName || 'Pengurus RT',
+        action: `Mengubah status iuran bulanan ${citizen ? citizen.name : nik} menjadi ${nextStatus}`
+      });
+      saveKvState();
+
+      const payload = {
+        kasTransactions: getKasTransactions(),
+        citizenDues: getCitizenDues(),
+        auditLogs: db.auditLogs
+      };
+      broadcastEvent('finance:update', payload);
+      return sendJSON(res, 200, payload);
+    } catch {
+      return sendJSON(res, 400, { error: 'Gagal memperbarui status iuran warga.' });
+    }
+  }
+
+  // --- ADMIN GOVERNANCE ---
   if (req.method === 'POST' && pathname === '/api/admin/citizen-status') {
     try {
       const { nik, status, actorName } = await parseBody(req);
@@ -677,10 +790,14 @@ const server = http.createServer(async (req, res) => {
         id: `log_${Date.now()}`,
         time: nowTime(),
         actor: actorName || 'Admin RT',
-        action: `Mengubah status ${target.name} (${target.nik}) menjadi ${status}`
+        action: `Mengubah status kependudukan ${target.name} (${target.nik}) menjadi ${status}`
       });
-      await persistDatabase();
-      broadcastEvent('users:update', { users: db.users.map(sanitizeUser), auditLogs: db.auditLogs });
+      saveKvState();
+      broadcastEvent('users:update', {
+        users: db.users.map(sanitizeUser),
+        auditLogs: db.auditLogs,
+        citizenDues: getCitizenDues()
+      });
       return sendJSON(res, 200, { users: db.users.map(sanitizeUser), auditLogs: db.auditLogs });
     } catch {
       return sendJSON(res, 400, { error: 'Gagal memperbarui status warga.' });
@@ -692,33 +809,38 @@ const server = http.createServer(async (req, res) => {
     const target = db.users.find((u) => u.nik === nik);
     if (!target) return sendJSON(res, 404, { error: 'Warga tidak ditemukan.' });
     db.users = db.users.filter((u) => u.nik !== nik);
+    sqlite.prepare('DELETE FROM citizen_dues WHERE nik = ?').run(nik);
     db.auditLogs.unshift({
       id: `log_${Date.now()}`,
       time: nowTime(),
       actor: 'Admin RT',
       action: `Menghapus permanen data ${target.name} (NIK: ${target.nik})`
     });
-    await persistDatabase();
-    broadcastEvent('users:update', { users: db.users.map(sanitizeUser), auditLogs: db.auditLogs });
+    saveKvState();
+    broadcastEvent('users:update', {
+      users: db.users.map(sanitizeUser),
+      auditLogs: db.auditLogs,
+      citizenDues: getCitizenDues()
+    });
     return sendJSON(res, 200, { users: db.users.map(sanitizeUser), auditLogs: db.auditLogs });
   }
 
   if (req.method === 'POST' && pathname === '/api/admin/reset') {
-    db = createSeedData();
-    await persistDatabase();
+    initDatabase(true);
     broadcastEvent('bootstrap:reset', {
       channels: db.channels,
       users: db.users.map(sanitizeUser),
       messages: db.messages,
       posts: db.posts,
-      auditLogs: db.auditLogs
+      auditLogs: db.auditLogs,
+      kasTransactions: getKasTransactions(),
+      citizenDues: getCitizenDues()
     });
     return sendJSON(res, 200, { ok: true });
   }
 
-  // --- STATIC ASSETS SERVER ---
-  let filePath = pathname === '/' ? '/index.html' : pathname;
-  // Prevent directory traversal
+  // --- STATIC ASSETS ---
+  const filePath = pathname === '/' ? '/index.html' : pathname;
   const resolvedPath = path.normalize(path.join(__dirname, filePath));
   if (!resolvedPath.startsWith(__dirname) || resolvedPath.includes('data' + path.sep + 'private')) {
     res.writeHead(403);
@@ -727,9 +849,8 @@ const server = http.createServer(async (req, res) => {
 
   if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
     const ext = path.extname(resolvedPath).toLowerCase();
-    const mime = MIME_TYPES[ext] || 'application/octet-stream';
     res.writeHead(200, {
-      'Content-Type': mime,
+      'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'SAMEORIGIN'
     });
@@ -740,8 +861,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-initDatabase().then(() => {
-  server.listen(PORT, HOST, () => {
-    console.log(`[RT-Ku v0.2 Server] Berjalan di http://${HOST}:${PORT}`);
-  });
+server.listen(PORT, HOST, () => {
+  console.log(`[RT-Ku v0.3 SQLite-WAL Server] Aktif di http://${HOST}:${PORT}`);
 });
